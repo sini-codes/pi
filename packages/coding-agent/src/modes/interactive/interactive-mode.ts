@@ -980,8 +980,8 @@ export class InteractiveMode {
 				hint("app.thinking.toggle", "to expand thinking"),
 				hint("app.editor.external", "for external editor"),
 				rawKeyHint("/", "for commands"),
-				rawKeyHint("!", "to run bash"),
-				rawKeyHint("!!", "to run bash (no context)"),
+				rawKeyHint("!", "to run shell"),
+				rawKeyHint("!!", "to run shell (no context)"),
 				hint("app.message.followUp", "to queue follow-up"),
 				hint("app.message.dequeue", "to edit all queued messages"),
 				hint("app.clipboard.pasteImage", "to paste image (with text fallback)"),
@@ -991,7 +991,7 @@ export class InteractiveMode {
 				hint("app.interrupt", "interrupt"),
 				rawKeyHint(`${keyText("app.clear")}/${keyText("app.exit")}`, "clear/exit"),
 				rawKeyHint("/", "commands"),
-				rawKeyHint("!", "bash"),
+				rawKeyHint("!", "shell"),
 				hint("app.tools.expand", "more"),
 			].join(theme.fg("muted", " · "));
 			const compactOnboarding = theme.fg(
@@ -2866,8 +2866,9 @@ export class InteractiveMode {
 		this.defaultEditor.onEscape = () => {
 			if (this.session.isStreaming) {
 				this.restoreQueuedMessagesToEditor({ abort: true });
-			} else if (this.session.isBashRunning) {
+			} else if (this.session.isBashRunning || this.session.isPwshRunning) {
 				this.session.abortBash();
+				this.session.abortPwsh();
 			} else if (this.isBashMode) {
 				this.editor.setText("");
 				this.isBashMode = false;
@@ -3121,8 +3122,8 @@ export class InteractiveMode {
 				const isExcluded = text.startsWith("!!");
 				const command = isExcluded ? text.slice(2).trim() : text.slice(1).trim();
 				if (command) {
-					if (this.session.isBashRunning) {
-						this.showWarning("A bash command is already running. Press Esc to cancel it first.");
+					if (this.session.isBashRunning || this.session.isPwshRunning) {
+						this.showWarning("A shell command is already running. Press Esc to cancel it first.");
 						this.editor.setText(text);
 						return;
 					}
@@ -3592,7 +3593,8 @@ export class InteractiveMode {
 	private addMessageToChat(message: AgentMessage, options?: { populateHistory?: boolean }): void {
 		switch (message.role) {
 			case "bashExecution": {
-				const component = new BashExecutionComponent(message.command, this.ui, message.excludeFromContext);
+				const shell = message.shell ?? "bash";
+				const component = new BashExecutionComponent(message.command, this.ui, message.excludeFromContext, shell);
 				if (message.output) {
 					component.appendOutput(message.output);
 				}
@@ -6355,8 +6357,8 @@ export class InteractiveMode {
 | \`${dequeue}\` | Restore queued messages |
 | \`${pasteImage}\` | Paste image or text from clipboard |
 | \`/\` | Slash commands |
-| \`!\` | Run bash command |
-| \`!!\` | Run bash command (excluded from context) |
+| \`!\` | Run active shell command |
+| \`!!\` | Run active shell command (excluded from context) |
 `;
 
 		// Add extension-registered shortcuts
@@ -6458,21 +6460,30 @@ export class InteractiveMode {
 
 	private async handleBashCommand(command: string, excludeFromContext = false): Promise<void> {
 		const extensionRunner = this.session.extensionRunner;
+		const shell = this.session.getActiveShellToolName();
+		const shellLabel = shell === "pwsh" ? "Pwsh" : "Bash";
 
-		// Emit user_bash event to let extensions intercept
-		const eventResult = await extensionRunner.emitUserBash({
-			type: "user_bash",
-			command,
-			excludeFromContext,
-			cwd: this.sessionManager.getCwd(),
-		});
+		const eventResult =
+			shell === "pwsh"
+				? await extensionRunner.emitUserPwsh({
+						type: "user_pwsh",
+						command,
+						excludeFromContext,
+						cwd: this.sessionManager.getCwd(),
+					})
+				: await extensionRunner.emitUserBash({
+						type: "user_bash",
+						command,
+						excludeFromContext,
+						cwd: this.sessionManager.getCwd(),
+					});
 
 		// If extension returned a full result, use it directly
 		if (eventResult?.result) {
 			const result = eventResult.result;
 
 			// Create UI component for display
-			this.bashComponent = new BashExecutionComponent(command, this.ui, excludeFromContext);
+			this.bashComponent = new BashExecutionComponent(command, this.ui, excludeFromContext, shell);
 			if (this.session.isStreaming) {
 				this.pendingMessagesContainer.addChild(this.bashComponent);
 				this.pendingBashComponents.push(this.bashComponent);
@@ -6492,7 +6503,11 @@ export class InteractiveMode {
 			);
 
 			// Record the result in session
-			this.session.recordBashResult(command, result, { excludeFromContext });
+			if (shell === "pwsh") {
+				this.session.recordPwshResult(command, result, { excludeFromContext });
+			} else {
+				this.session.recordBashResult(command, result, { excludeFromContext });
+			}
 			this.bashComponent = undefined;
 			this.ui.requestRender();
 			return;
@@ -6500,7 +6515,7 @@ export class InteractiveMode {
 
 		// Normal execution path (possibly with custom operations)
 		const isDeferred = this.session.isStreaming;
-		this.bashComponent = new BashExecutionComponent(command, this.ui, excludeFromContext);
+		this.bashComponent = new BashExecutionComponent(command, this.ui, excludeFromContext, shell);
 
 		if (isDeferred) {
 			// Show in pending area when agent is streaming
@@ -6513,16 +6528,22 @@ export class InteractiveMode {
 		this.ui.requestRender();
 
 		try {
-			const result = await this.session.executeBash(
-				command,
-				(chunk) => {
-					if (this.bashComponent) {
-						this.bashComponent.appendOutput(chunk);
-						this.ui.requestRender();
-					}
-				},
-				{ excludeFromContext, operations: eventResult?.operations },
-			);
+			const onChunk = (chunk: string) => {
+				if (this.bashComponent) {
+					this.bashComponent.appendOutput(chunk);
+					this.ui.requestRender();
+				}
+			};
+			const result =
+				shell === "pwsh"
+					? await this.session.executePwsh(command, onChunk, {
+							excludeFromContext,
+							operations: eventResult?.operations,
+						})
+					: await this.session.executeBash(command, onChunk, {
+							excludeFromContext,
+							operations: eventResult?.operations,
+						});
 
 			if (this.bashComponent) {
 				this.bashComponent.setComplete(
@@ -6536,7 +6557,7 @@ export class InteractiveMode {
 			if (this.bashComponent) {
 				this.bashComponent.setComplete(undefined, false);
 			}
-			this.showError(`Bash command failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+			this.showError(`${shellLabel} command failed: ${error instanceof Error ? error.message : "Unknown error"}`);
 		}
 
 		this.bashComponent = undefined;

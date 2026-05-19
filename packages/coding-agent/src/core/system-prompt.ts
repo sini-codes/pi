@@ -8,7 +8,7 @@ import { formatSkillsForPrompt, type Skill } from "./skills.ts";
 export interface BuildSystemPromptOptions {
 	/** Custom system prompt (replaces default). */
 	customPrompt?: string;
-	/** Tools to include in prompt. Default: [read, bash, edit, write] */
+	/** Tools to include in prompt. Default: [read, pwsh, edit, write] */
 	selectedTools?: string[];
 	/** Optional one-line tool snippets keyed by tool name. */
 	toolSnippets?: Record<string, string>;
@@ -78,7 +78,7 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
 
 	// Build tools list based on selected tools.
 	// A tool appears in Available tools only when the caller provides a one-line snippet.
-	const tools = selectedTools || ["read", "bash", "edit", "write"];
+	const tools = selectedTools || ["read", "pwsh", "edit", "write"];
 	const visibleTools = tools.filter((name) => !!toolSnippets?.[name]);
 	const toolsList =
 		visibleTools.length > 0 ? visibleTools.map((name) => `- ${name}: ${toolSnippets![name]}`).join("\n") : "(none)";
@@ -96,13 +96,16 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
 
 	const hasBash = tools.includes("bash");
 	const hasPowerShell = tools.includes("powershell");
+	const hasPwsh = tools.includes("pwsh");
 	const hasGrep = tools.includes("grep");
 	const hasFind = tools.includes("find");
 	const hasLs = tools.includes("ls");
 	const hasRead = tools.includes("read");
 
 	// File exploration guidelines
-	if ((hasBash || hasPowerShell) && !hasGrep && !hasFind && !hasLs) {
+	if (hasBash && hasPwsh) {
+		addGuideline("Only one shell tool should be active at a time; use the shell tool listed in Available tools");
+	} else if ((hasBash || hasPowerShell) && !hasGrep && !hasFind && !hasLs) {
 		if (hasBash && hasPowerShell) {
 			addGuideline("Use bash or PowerShell for file operations like listing, searching, and finding files");
 		} else if (hasPowerShell) {
@@ -110,6 +113,8 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
 		} else {
 			addGuideline("Use bash for file operations like ls, rg, find");
 		}
+	} else if (hasPwsh && !hasGrep && !hasFind && !hasLs) {
+		addGuideline("Use pwsh for shell operations like Get-ChildItem, Select-String, git, and npm");
 	}
 
 	for (const guideline of promptGuidelines ?? []) {

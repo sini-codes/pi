@@ -20,6 +20,7 @@ const PREVIEW_LINES = 20;
 
 export class BashExecutionComponent extends Container {
 	private command: string;
+	private shell: "bash" | "pwsh";
 	private outputLines: string[] = [];
 	private status: "running" | "complete" | "cancelled" | "error" = "running";
 	private exitCode: number | undefined = undefined;
@@ -29,9 +30,10 @@ export class BashExecutionComponent extends Container {
 	private expanded = false;
 	private contentContainer: Container;
 
-	constructor(command: string, ui: TUI, excludeFromContext = false) {
+	constructor(command: string, ui: TUI, excludeFromContext = false, shell: "bash" | "pwsh" = "bash") {
 		super();
 		this.command = command;
+		this.shell = shell;
 
 		// Use dim border for excluded-from-context commands (!! prefix)
 		const colorKey = excludeFromContext ? "dim" : "bashMode";
@@ -48,7 +50,7 @@ export class BashExecutionComponent extends Container {
 		this.addChild(this.contentContainer);
 
 		// Command header
-		const header = new Text(theme.fg(colorKey, theme.bold(`$ ${command}`)), 1, 0);
+		const header = new Text(theme.fg(colorKey, theme.bold(`${this.promptPrefix()} ${command}`)), 1, 0);
 		this.contentContainer.addChild(header);
 
 		// Loader
@@ -135,7 +137,7 @@ export class BashExecutionComponent extends Container {
 		this.contentContainer.clear();
 
 		// Command header
-		const header = new Text(theme.fg("bashMode", theme.bold(`$ ${this.command}`)), 1, 0);
+		const header = new Text(theme.fg("bashMode", theme.bold(`${this.promptPrefix()} ${this.command}`)), 1, 0);
 		this.contentContainer.addChild(header);
 
 		// Output
@@ -216,5 +218,9 @@ export class BashExecutionComponent extends Container {
 	 */
 	getCommand(): string {
 		return this.command;
+	}
+
+	private promptPrefix(): string {
+		return this.shell === "pwsh" ? "PS>" : "$";
 	}
 }

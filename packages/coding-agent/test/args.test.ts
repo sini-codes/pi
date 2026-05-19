@@ -414,6 +414,19 @@ describe("parseArgs", () => {
 			expect(result.tools).toEqual(["read", "bash"]);
 		});
 
+		test("parses --shell flag", () => {
+			const result = parseArgs(["--shell", "pwsh"]);
+			expect(result.shell).toBe("pwsh");
+		});
+
+		test("rejects invalid --shell values", () => {
+			const result = parseArgs(["--shell", "zsh"]);
+			expect(result.diagnostics).toContainEqual({
+				type: "error",
+				message: 'Invalid shell "zsh". Valid values: bash, pwsh',
+			});
+		});
+
 		test("parses -t shorthand", () => {
 			const result = parseArgs(["-t", "read,bash"]);
 			expect(result.tools).toEqual(["read", "bash"]);

@@ -588,6 +588,16 @@ export async function runRpcMode(runtimeHost: AgentSessionRuntime): Promise<neve
 				return success(id, "abort_bash");
 			}
 
+			case "pwsh": {
+				const result = await session.executePwsh(command.command);
+				return success(id, "pwsh", result);
+			}
+
+			case "abort_pwsh": {
+				session.abortPwsh();
+				return success(id, "abort_pwsh");
+			}
+
 			// =================================================================
 			// Session
 			// =================================================================

@@ -530,6 +530,9 @@ function buildSessionOptions(
 	} else if (parsed.noBuiltinTools) {
 		options.noTools = "builtin";
 	}
+	if (parsed.shell) {
+		options.shellTool = parsed.shell;
+	}
 	if (parsed.tools) {
 		options.tools = [...parsed.tools];
 	}
@@ -822,6 +825,7 @@ export async function main(args: string[], options?: MainOptions) {
 			scopedModels: sessionOptions.scopedModels,
 			tools: sessionOptions.tools,
 			excludeTools: sessionOptions.excludeTools,
+			shellTool: sessionOptions.shellTool,
 			noTools: sessionOptions.noTools,
 			customTools: sessionOptions.customTools,
 		});

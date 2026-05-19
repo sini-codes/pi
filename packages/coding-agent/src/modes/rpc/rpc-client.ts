@@ -8,7 +8,7 @@ import { type ChildProcess, spawn } from "node:child_process";
 import type { AgentMessage, ThinkingLevel } from "@earendil-works/pi-agent-core";
 import type { ImageContent } from "@earendil-works/pi-ai";
 import type { SessionStats } from "../../core/agent-session.ts";
-import type { BashResult } from "../../core/bash-executor.ts";
+import type { BashResult, PwshResult } from "../../core/bash-executor.ts";
 import type { CompactionResult } from "../../core/compaction/index.ts";
 import type { SessionEntry, SessionTreeNode } from "../../core/session-manager.ts";
 import type { JsonAgentSessionEvent } from "../json-event.ts";
@@ -353,6 +353,21 @@ export class RpcClient {
 	 */
 	async abortBash(): Promise<void> {
 		await this.send({ type: "abort_bash" });
+	}
+
+	/**
+	 * Execute a pwsh command.
+	 */
+	async pwsh(command: string): Promise<PwshResult> {
+		const response = await this.send({ type: "pwsh", command });
+		return this.getData(response);
+	}
+
+	/**
+	 * Abort running pwsh command.
+	 */
+	async abortPwsh(): Promise<void> {
+		await this.send({ type: "abort_pwsh" });
 	}
 
 	/**

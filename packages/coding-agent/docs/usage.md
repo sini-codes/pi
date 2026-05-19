@@ -28,6 +28,8 @@ The editor can be replaced temporarily by built-in UI such as `/settings` or by 
 | Hidden shell command | `!!command` runs without sending output to the model |
 | External editor | Ctrl+G opens `externalEditor`, `$VISUAL`, `$EDITOR`, Notepad on Windows, or `nano` elsewhere |
 
+By default the active shell tool is `pwsh`. Use `--shell bash` to swap the default shell back to Bash without turning `--tools` into an allowlist. `bash` and `pwsh` are mutually exclusive in the active tool set.
+
 See [Keybindings](keybindings.md) for all shortcuts and customization.
 
 ## Slash Commands

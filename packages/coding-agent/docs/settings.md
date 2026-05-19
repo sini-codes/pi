@@ -193,8 +193,9 @@ Keep `retry.provider.maxRetries` at `0` unless provider-level retries are explic
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `shellPath` | string | - | Custom shell path (e.g., for Cygwin on Windows); supports a leading `~` for the home directory |
-| `shellCommandPrefix` | string | - | Prefix for every bash command (e.g., `"shopt -s expand_aliases"`) |
+| `shellTool` | `"bash"` or `"pwsh"` | `"pwsh"` | Default active shell tool when `--tools` is not used |
+| `shellPath` | string | - | Custom shell path for the active shell; supports a leading `~` for the home directory |
+| `shellCommandPrefix` | string | - | Prefix for every shell command (e.g., `"shopt -s expand_aliases"` for Bash) |
 | `npmCommand` | string[] | - | Command argv used for npm package lookup/install operations (e.g., `["mise", "exec", "node@20", "--", "npm"]`) |
 
 Windows paths in JSON must use forward slashes or escaped backslashes:

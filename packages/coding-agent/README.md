@@ -88,7 +88,7 @@ pi
 /login  # Then select provider
 ```
 
-Then just talk to pi. By default, pi gives the model four tools: `read`, `write`, `edit`, and `bash`. The model uses these to fulfill your requests. Add capabilities via [skills](#skills), [prompt templates](#prompt-templates), [extensions](#extensions), or [pi packages](#pi-packages).
+Then just talk to pi. By default, pi gives the model four tools: `read`, `write`, `edit`, and `pwsh`. The model uses these to fulfill your requests. Use `--shell bash` to swap the default shell tool back to Bash; only one shell tool (`bash` or `pwsh`) can be active at a time. Add capabilities via [skills](#skills), [prompt templates](#prompt-templates), [extensions](#extensions), or [pi packages](#pi-packages).
 
 **Platform notes:** [Windows](docs/windows.md) | [Termux (Android)](docs/termux.md) | [tmux](docs/tmux.md) | [Terminal setup](docs/terminal-setup.md) | [Shell aliases](docs/shell-aliases.md)
 
@@ -166,7 +166,7 @@ The editor can be temporarily replaced by other UI, like built-in `/settings` or
 | Multi-line | Shift+Enter (or Ctrl+Enter on Windows Terminal) |
 | External editor | Ctrl+G opens `externalEditor`, `$VISUAL`, `$EDITOR`, Notepad on Windows, or `nano` elsewhere |
 | Clipboard | Ctrl+V to paste an image or text (Alt+V on Windows), or drag images onto terminal |
-| Bash commands | `!command` runs and sends output to LLM, `!!command` runs without sending |
+| Shell commands | `!command` runs through the active shell tool and sends output to LLM, `!!command` runs without sending |
 
 Standard editing keybindings for delete word, undo, etc. See [docs/keybindings.md](docs/keybindings.md).
 
