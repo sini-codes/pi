@@ -75,6 +75,8 @@ Prefix a command with `!` to run it and include its output in the conversation:
 
 Use `!!` when you want to run a command without sending its output to the model.
 
+Commands run through the active shell tool. By default that is `pwsh`; use `--shell bash` to switch the default shell back to Bash without turning `--tools` into an allowlist. `bash` and `pwsh` are mutually exclusive in the active tool set.
+
 ## Copy, export, or share results
 
 Press `Ctrl+X` or run `/copy` to copy the last assistant response. Use `/export` to save the session as HTML or JSONL.

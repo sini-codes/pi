@@ -53,6 +53,8 @@ pi
 
 For a built-in AI provider, run `/login` inside Pi to connect a subscription or API key. Then give Pi a task.
 
+By default, Pi gives the model four tools: `read`, `write`, `edit`, and `pwsh` (PowerShell Core). Use `--shell bash` to swap the default shell tool back to Bash; only one shell tool (`bash` or `pwsh`) can be active at a time. `!command` runs through the active shell tool.
+
 See the [documentation](docs/index.md) for full setup and usage instructions.
 
 ## Share your OSS coding agent sessions

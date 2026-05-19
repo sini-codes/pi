@@ -178,7 +178,7 @@ export default function (pi: ExtensionAPI) {
 			return { render: () => [], invalidate: () => {} };
 		});
 
-		// Return result to prevent default bash handling
+		// Return result to prevent default shell handling
 		const output =
 			exitCode === 0
 				? "(interactive command completed successfully)"

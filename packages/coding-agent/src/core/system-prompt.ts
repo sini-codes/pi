@@ -11,7 +11,7 @@ export interface BuildSystemPromptOptions {
 	customPrompt?: string;
 	/** Exact full prompt replacement set by a before_agent_start handler. */
 	forceSystemPrompt?: string;
-	/** Tools to include in prompt. Default: [read, bash, edit, write]. */
+	/** Tools to include in prompt. Default: [read, pwsh, edit, write]. */
 	selectedTools?: string[];
 	/**
 	 * Selected tools whose declarations requests leave out (`prepareLoadout` hidden declarations).
@@ -61,7 +61,7 @@ export function normalizeBuildSystemPromptOptions(input: BuildSystemPromptOption
 	return {
 		customPrompt: input.customPrompt,
 		forceSystemPrompt: input.forceSystemPrompt,
-		selectedTools: [...(input.selectedTools ?? ["read", "bash", "edit", "write"])],
+		selectedTools: [...(input.selectedTools ?? ["read", "pwsh", "edit", "write"])],
 		hiddenTools: [...(input.hiddenTools ?? [])],
 		toolSnippets: { ...(input.toolSnippets ?? {}) },
 		toolGuidelines: Object.fromEntries(
@@ -101,11 +101,16 @@ function buildRules(
 
 	const hasBash = selectedTools.includes("bash");
 	const hasPowerShell = selectedTools.includes("powershell");
+	const hasPwsh = selectedTools.includes("pwsh");
 	const hasGrep = selectedTools.includes("grep");
 	const hasFind = selectedTools.includes("find");
 	const hasLs = selectedTools.includes("ls");
 
-	if ((hasBash || hasPowerShell) && !hasGrep && !hasFind && !hasLs) {
+	if (hasBash && hasPwsh) {
+		addRule("Only one shell tool should be active at a time; use the shell tool listed in Available tools");
+	} else if (hasPwsh && !hasGrep && !hasFind && !hasLs) {
+		addRule("Use pwsh for shell operations like Get-ChildItem, Select-String, git, and npm");
+	} else if ((hasBash || hasPowerShell) && !hasGrep && !hasFind && !hasLs) {
 		if (hasBash && hasPowerShell) {
 			addRule("Use bash or PowerShell for file operations like listing, searching, and finding files");
 		} else if (hasPowerShell) {

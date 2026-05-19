@@ -54,6 +54,17 @@ export {
 	type PowerShellToolOptions,
 } from "./powershell.ts";
 export {
+	createLocalPwshOperations,
+	createPwshTool,
+	createPwshToolDefinition,
+	type PwshOperations,
+	type PwshSpawnContext,
+	type PwshSpawnHook,
+	type PwshToolDetails,
+	type PwshToolInput,
+	type PwshToolOptions,
+} from "./pwsh.ts";
+export {
 	createReadTool,
 	createReadToolDefinition,
 	type ReadOperations,
@@ -87,15 +98,17 @@ import { createFindTool, createFindToolDefinition, type FindToolOptions } from "
 import { createGrepTool, createGrepToolDefinition, type GrepToolOptions } from "./grep.ts";
 import { createLsTool, createLsToolDefinition, type LsToolOptions } from "./ls.ts";
 import { createPowerShellTool, createPowerShellToolDefinition, type PowerShellToolOptions } from "./powershell.ts";
+import { createPwshTool, createPwshToolDefinition, type PwshToolOptions } from "./pwsh.ts";
 import { createReadTool, createReadToolDefinition, type ReadToolOptions } from "./read.ts";
 import { createWriteTool, createWriteToolDefinition, type WriteToolOptions } from "./write.ts";
 
 export type Tool = AgentTool<any>;
 export type ToolDef = ToolDefinition<any, any>;
-export type ToolName = "read" | "bash" | "powershell" | "edit" | "write" | "grep" | "find" | "ls";
+export type ToolName = "read" | "bash" | "pwsh" | "powershell" | "edit" | "write" | "grep" | "find" | "ls";
 export const allToolNames: Set<ToolName> = new Set([
 	"read",
 	"bash",
+	"pwsh",
 	"powershell",
 	"edit",
 	"write",
@@ -107,6 +120,7 @@ export const allToolNames: Set<ToolName> = new Set([
 export interface ToolsOptions {
 	read?: ReadToolOptions;
 	bash?: BashToolOptions;
+	pwsh?: PwshToolOptions;
 	powershell?: PowerShellToolOptions;
 	write?: WriteToolOptions;
 	edit?: EditToolOptions;
@@ -121,6 +135,8 @@ export function createToolDefinition(toolName: ToolName, cwd: string, options?: 
 			return createReadToolDefinition(cwd, options?.read);
 		case "bash":
 			return createBashToolDefinition(cwd, options?.bash);
+		case "pwsh":
+			return createPwshToolDefinition(cwd, options?.pwsh);
 		case "powershell":
 			return createPowerShellToolDefinition(cwd, options?.powershell);
 		case "edit":
@@ -144,6 +160,8 @@ export function createTool(toolName: ToolName, cwd: string, options?: ToolsOptio
 			return createReadTool(cwd, options?.read);
 		case "bash":
 			return createBashTool(cwd, options?.bash);
+		case "pwsh":
+			return createPwshTool(cwd, options?.pwsh);
 		case "powershell":
 			return createPowerShellTool(cwd, options?.powershell);
 		case "edit":
@@ -183,6 +201,7 @@ export function createAllToolDefinitions(cwd: string, options?: ToolsOptions): R
 	return {
 		read: createReadToolDefinition(cwd, options?.read),
 		bash: createBashToolDefinition(cwd, options?.bash),
+		pwsh: createPwshToolDefinition(cwd, options?.pwsh),
 		powershell: createPowerShellToolDefinition(cwd, options?.powershell),
 		edit: createEditToolDefinition(cwd, options?.edit),
 		write: createWriteToolDefinition(cwd, options?.write),
@@ -214,6 +233,7 @@ export function createAllTools(cwd: string, options?: ToolsOptions): Record<Tool
 	return {
 		read: createReadTool(cwd, options?.read),
 		bash: createBashTool(cwd, options?.bash),
+		pwsh: createPwshTool(cwd, options?.pwsh),
 		powershell: createPowerShellTool(cwd, options?.powershell),
 		edit: createEditTool(cwd, options?.edit),
 		write: createWriteTool(cwd, options?.write),

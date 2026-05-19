@@ -103,7 +103,8 @@ Each boundary can be supplied explicitly:
 - `settingsManager` supplies merged settings or an in-memory configuration.
 - `sessionManager` supplies persistent or in-memory conversation history.
 - `resourceLoader` supplies extensions, skills, prompt templates, themes, and context files.
-- `tools`, `noTools`, `excludeTools`, and `customTools` control the active tool set.
+- `tools`, `noTools`, `excludeTools`, and `customTools` control the active tool set. Built-in tool names are `read`, `bash`, `pwsh`, `powershell`, `edit`, `write`, `grep`, `find`, and `ls`; the default built-ins are `read`, `pwsh`, `edit`, `write`.
+- `shellTool` (`"bash"` or `"pwsh"`) selects the default shell tool when no `tools` allowlist is given. Default: settings `shellTool` or `"pwsh"`.
 
 Use `DefaultResourceLoader` when you want standard discovery with selected overrides. Supply a custom `ResourceLoader` when the host owns resource storage and discovery completely.
 
