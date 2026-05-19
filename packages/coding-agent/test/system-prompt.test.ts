@@ -42,7 +42,7 @@ describe("buildSystemPrompt", () => {
 			const prompt = buildSystemPrompt({
 				toolSnippets: {
 					read: "Read file contents",
-					bash: "Execute bash commands",
+					pwsh: "Execute PowerShell commands",
 					edit: "Make surgical edits",
 					write: "Create or overwrite files",
 				},
@@ -52,7 +52,7 @@ describe("buildSystemPrompt", () => {
 			});
 
 			expect(prompt).toContain("- read:");
-			expect(prompt).toContain("- bash:");
+			expect(prompt).toContain("- pwsh:");
 			expect(prompt).toContain("- edit:");
 			expect(prompt).toContain("- write:");
 		});
@@ -113,6 +113,25 @@ describe("buildSystemPrompt", () => {
 	});
 
 	describe("prompt guidelines", () => {
+		test("uses pwsh guidance when pwsh is selected", () => {
+			const prompt = buildSystemPrompt({
+				selectedTools: ["read", "pwsh", "edit", "write"],
+				toolSnippets: {
+					read: "Read file contents",
+					pwsh: "Execute PowerShell commands",
+					edit: "Make surgical edits",
+					write: "Create or overwrite files",
+				},
+				contextFiles: [],
+				skills: [],
+				cwd: process.cwd(),
+			});
+
+			expect(prompt).toContain("- pwsh: Execute PowerShell commands");
+			expect(prompt).toContain("Use pwsh for shell operations");
+			expect(prompt).not.toContain("Use bash for file operations");
+		});
+
 		test("appends promptGuidelines to default guidelines", () => {
 			const prompt = buildSystemPrompt({
 				selectedTools: ["read", "dynamic_tool"],

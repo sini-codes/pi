@@ -46,7 +46,7 @@ import type {
 } from "@earendil-works/pi-tui";
 import type { Static, TSchema } from "typebox";
 import type { Theme } from "../../modes/interactive/theme/theme.ts";
-import type { BashResult } from "../bash-executor.ts";
+import type { BashResult, PwshResult } from "../bash-executor.ts";
 import type { CompactionPreparation, CompactionResult } from "../compaction/index.ts";
 import type { EventBus } from "../event-bus.ts";
 import type { ExecOptions, ExecResult } from "../exec.ts";
@@ -80,10 +80,13 @@ import type {
 	LsToolInput,
 	PowerShellToolDetails,
 	PowerShellToolInput,
+	PwshToolDetails,
+	PwshToolInput,
 	ReadToolDetails,
 	ReadToolInput,
 	WriteToolInput,
 } from "../tools/index.ts";
+import type { PwshOperations } from "../tools/pwsh.ts";
 
 export type { ExecOptions, ExecResult } from "../exec.ts";
 export type { BuildSystemPromptOptions } from "../system-prompt.ts";
@@ -856,6 +859,17 @@ export interface UserBashEvent {
 	cwd: string;
 }
 
+/** Fired when user executes a pwsh command via ! or !! prefix */
+export interface UserPwshEvent {
+	type: "user_pwsh";
+	/** The command to execute */
+	command: string;
+	/** True if !! prefix was used (excluded from LLM context) */
+	excludeFromContext: boolean;
+	/** Current working directory */
+	cwd: string;
+}
+
 // ============================================================================
 // Input Events
 // ============================================================================
@@ -894,6 +908,11 @@ interface ToolCallEventBase {
 export interface BashToolCallEvent extends ToolCallEventBase {
 	toolName: "bash";
 	input: BashToolInput;
+}
+
+export interface PwshToolCallEvent extends ToolCallEventBase {
+	toolName: "pwsh";
+	input: PwshToolInput;
 }
 
 export interface PowerShellToolCallEvent extends ToolCallEventBase {
@@ -944,6 +963,7 @@ export interface CustomToolCallEvent extends ToolCallEventBase {
  */
 export type ToolCallEvent =
 	| BashToolCallEvent
+	| PwshToolCallEvent
 	| PowerShellToolCallEvent
 	| ReadToolCallEvent
 	| EditToolCallEvent
@@ -966,6 +986,11 @@ interface ToolResultEventBase {
 export interface BashToolResultEvent extends ToolResultEventBase {
 	toolName: "bash";
 	details: BashToolDetails | undefined;
+}
+
+export interface PwshToolResultEvent extends ToolResultEventBase {
+	toolName: "pwsh";
+	details: PwshToolDetails | undefined;
 }
 
 export interface PowerShellToolResultEvent extends ToolResultEventBase {
@@ -1011,6 +1036,7 @@ export interface CustomToolResultEvent extends ToolResultEventBase {
 /** Fired after a tool executes. Can modify result. */
 export type ToolResultEvent =
 	| BashToolResultEvent
+	| PwshToolResultEvent
 	| PowerShellToolResultEvent
 	| ReadToolResultEvent
 	| EditToolResultEvent
@@ -1024,6 +1050,10 @@ export type ToolResultEvent =
 export function isBashToolResult(e: ToolResultEvent): e is BashToolResultEvent {
 	return e.toolName === "bash";
 }
+export function isPwshToolResult(e: ToolResultEvent): e is PwshToolResultEvent {
+	return e.toolName === "pwsh";
+}
+
 export function isPowerShellToolResult(e: ToolResultEvent): e is PowerShellToolResultEvent {
 	return e.toolName === "powershell";
 }
@@ -1067,6 +1097,7 @@ export function isLsToolResult(e: ToolResultEvent): e is LsToolResultEvent {
  * CustomToolCallEvent.toolName is `string` which overlaps with all literals.
  */
 export function isToolCallEventType(toolName: "bash", event: ToolCallEvent): event is BashToolCallEvent;
+export function isToolCallEventType(toolName: "pwsh", event: ToolCallEvent): event is PwshToolCallEvent;
 export function isToolCallEventType(toolName: "powershell", event: ToolCallEvent): event is PowerShellToolCallEvent;
 export function isToolCallEventType(toolName: "read", event: ToolCallEvent): event is ReadToolCallEvent;
 export function isToolCallEventType(toolName: "edit", event: ToolCallEvent): event is EditToolCallEvent;
@@ -1108,6 +1139,7 @@ export type ExtensionEvent =
 	| ModelSelectEvent
 	| ThinkingLevelSelectEvent
 	| UserBashEvent
+	| UserPwshEvent
 	| InputEvent
 	| ToolCallEvent
 	| ToolResultEvent;
@@ -1139,6 +1171,14 @@ export interface UserBashEventResult {
 	operations?: BashOperations;
 	/** Full replacement: extension handled execution, use this result */
 	result?: BashResult;
+}
+
+/** Result from user_pwsh event handler */
+export interface UserPwshEventResult {
+	/** Custom operations to use for execution */
+	operations?: PwshOperations;
+	/** Full replacement: extension handled execution, use this result */
+	result?: PwshResult;
 }
 
 export interface ToolResultEventResult {
@@ -1298,6 +1338,7 @@ export interface ExtensionAPI {
 	on(event: "tool_call", handler: ExtensionHandler<ToolCallEvent, ToolCallEventResult>): void;
 	on(event: "tool_result", handler: ExtensionHandler<ToolResultEvent, ToolResultEventResult>): void;
 	on(event: "user_bash", handler: ExtensionHandler<UserBashEvent, UserBashEventResult>): void;
+	on(event: "user_pwsh", handler: ExtensionHandler<UserPwshEvent, UserPwshEventResult>): void;
 	on(event: "input", handler: ExtensionHandler<InputEvent, InputEventResult>): void;
 
 	// =========================================================================

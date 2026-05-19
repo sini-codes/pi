@@ -549,6 +549,31 @@ Response:
 {"type": "response", "command": "abort_bash", "success": true}
 ```
 
+### PowerShell
+
+#### pwsh
+
+Execute a PowerShell Core command and add output to conversation context.
+
+```json
+{"type": "pwsh", "command": "Get-ChildItem"}
+```
+
+Response shape matches `bash`, with `command: "pwsh"` and the same result fields.
+
+#### abort_pwsh
+
+Abort a running pwsh command.
+
+```json
+{"type": "abort_pwsh"}
+```
+
+Response:
+```json
+{"type": "response", "command": "abort_pwsh", "success": true}
+```
+
 ### Session
 
 #### get_session_stats

@@ -8,29 +8,15 @@ Pi uses Git Bash by default on Windows. Checked locations (in order):
 
 For most users, [Git for Windows](https://git-scm.com/download/win) is sufficient.
 
-## PowerShell Tool
+PowerShell Core is the default shell tool in this build. Install [PowerShell 7](https://learn.microsoft.com/powershell/scripting/install/installing-powershell) and make sure `pwsh` is on `PATH`.
 
-The optional `powershell` tool runs commands through `pwsh.exe` when available, otherwise Windows PowerShell. It starts PowerShell with `-NoProfile -NonInteractive -ExecutionPolicy Bypass`. Administrator-enforced execution policies can still take precedence.
-
-Use `defaultTools` to replace the model-facing `bash` tool:
-
-```json
-{
-  "defaultTools": ["read", "powershell", "edit", "write"]
-}
+```powershell
+pi
 ```
 
-Or enable both while comparing behavior:
+Use `pi --shell bash` to run with Bash instead. Only one shell tool can be active at a time, so do not enable `bash` and `pwsh` together.
 
-```json
-{
-  "defaultTools": ["read", "bash", "powershell", "edit", "write"]
-}
-```
-
-The `!` and `!!` editor commands still use Bash.
-
-## Custom Bash Path
+## Custom Shell Path
 
 ```json
 {
