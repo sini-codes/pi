@@ -91,6 +91,8 @@ import type {
 	UIPromptKind,
 	UserBashEvent,
 	UserBashEventResult,
+	UserPwshEvent,
+	UserPwshEventResult,
 } from "./types.ts";
 
 // Extension shortcuts compete with canonical keybinding ids from keybindings.json.
@@ -186,6 +188,7 @@ type RunnerEmitEvent = Exclude<
 	| ProjectTrustEvent
 	| ToolResultEvent
 	| UserBashEvent
+	| UserPwshEvent
 	| ContextEvent
 	| ContextWithSystemEvent
 	| CacheWarmingDecisionEvent
@@ -1286,6 +1289,37 @@ export class ExtensionRunner {
 					this.emitError({
 						extensionPath: ext.path,
 						event: "user_bash",
+						error: message,
+						stack,
+					});
+					throw err;
+				}
+			}
+		}
+
+		return undefined;
+	}
+
+	async emitUserPwsh(event: UserPwshEvent): Promise<UserPwshEventResult | undefined> {
+		const ctx = this.createContext();
+
+		for (const { ext, handlers } of snapshotEventHandlers(this.extensions, "user_pwsh")) {
+			for (const handler of handlers) {
+				try {
+					const handlerResult = await handler(event, ctx);
+					if (handlerResult === undefined) continue;
+					if (!isUserBashEventResult(handlerResult)) {
+						throw new Error(
+							"Invalid user_pwsh handler result: return undefined for local execution or exactly one valid { operations } or { result } object",
+						);
+					}
+					return handlerResult as UserPwshEventResult;
+				} catch (err) {
+					const message = err instanceof Error ? err.message : String(err);
+					const stack = err instanceof Error ? err.stack : undefined;
+					this.emitError({
+						extensionPath: ext.path,
+						event: "user_pwsh",
 						error: message,
 						stack,
 					});

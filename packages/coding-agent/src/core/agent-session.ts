@@ -61,7 +61,12 @@ import { processImage } from "../utils/image-process.ts";
 import { sleep } from "../utils/sleep.ts";
 import { normalizeToolResultImages } from "../utils/tool-result-images.ts";
 import { formatNoApiKeyFoundMessage, formatNoModelSelectedMessage } from "./auth-guidance.ts";
-import { type BashResult, executeBashWithOperations } from "./bash-executor.ts";
+import {
+	type BashResult,
+	executeBashWithOperations,
+	executePwshWithOperations,
+	type PwshResult,
+} from "./bash-executor.ts";
 import { generateBugReportSummary } from "./bug-report.ts";
 import type { CacheWarmer, CacheWarmingStatus } from "./cache-warmer.ts";
 import {
@@ -135,6 +140,7 @@ import {
 	type CacheWarmingMode,
 	DEFAULT_TOOL_NAMES,
 	type SettingsManager,
+	type ShellToolSetting,
 } from "./settings-manager.ts";
 import type { SlashCommandInfo } from "./slash-commands.ts";
 import { BUILTIN_PATH_PREFIX, createSyntheticSourceInfo, isSyntheticPath, type SourceInfo } from "./source-info.ts";
@@ -147,6 +153,7 @@ import {
 } from "./system-prompt.ts";
 import { type BashOperations, createLocalBashOperations } from "./tools/bash.ts";
 import { createAllToolDefinitions } from "./tools/index.ts";
+import { createLocalPwshOperations, type PwshOperations } from "./tools/pwsh.ts";
 import { createToolDefinitionFromAgentTool } from "./tools/tool-definition-wrapper.ts";
 import { addUsageToTotals, combineUsage, createUsageTotals } from "./usage-totals.ts";
 import {
@@ -239,6 +246,8 @@ export type AgentSessionEvent =
 /** Listener function for agent session events */
 export type AgentSessionEventListener = (event: AgentSessionEvent) => void;
 
+export type ShellToolName = ShellToolSetting;
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -264,8 +273,10 @@ export interface AgentSessionConfig {
 	modelRuntime: ModelRuntime;
 	/** Keeps the prompt cache entry of the last session request warm. */
 	cacheWarmer?: Pick<CacheWarmer, "cancel" | "status" | "onAgentSettled" | "onModeChanged" | "onWarmed">;
-	/** Initial active built-in tool names. Default: [read, bash, edit, write] */
+	/** Initial active built-in tool names. Default: [read, pwsh, edit, write] */
 	initialActiveToolNames?: string[];
+	/** Default shell for direct AgentSession construction. Default: pwsh. */
+	defaultShellTool?: ShellToolName;
 	/**
 	 * Whether the initial tools come from the `defaultTools` setting. When true, a resumed session
 	 * replaces them with the loadout its transcript records, with `defaultToolModifiers` applied, and
@@ -419,6 +430,7 @@ export class AgentSession {
 
 	// Bash execution state
 	private readonly _bashAbortControllers = new Set<AbortController>();
+	private _pwshAbortController: AbortController | undefined = undefined;
 	private _pendingBashMessages: BashExecutionMessage[] = [];
 
 	// Extension system
@@ -455,6 +467,7 @@ export class AgentSession {
 	 */
 	private _allowlistFiltersMcp = false;
 	private _excludedTools?: (name: string) => boolean;
+	private _defaultShellTool: ShellToolName;
 	private _baseToolsOverride?: Record<string, AgentTool>;
 	private _sessionStartEvent: SessionStartEvent;
 	private _extensionUIContext?: ExtensionUIContext;
@@ -505,6 +518,7 @@ export class AgentSession {
 				config.allowedToolNames.length === 0 || config.allowedToolNames.some((entry) => entry.startsWith("mcp__"));
 		}
 		this._excludedTools = config.excludedToolNames ? createToolNameMatcher(config.excludedToolNames) : undefined;
+		this._defaultShellTool = config.defaultShellTool ?? "pwsh";
 		this._baseToolsOverride = config.baseToolsOverride;
 		this._sessionStartEvent = config.sessionStartEvent ?? { type: "session_start", reason: "startup" };
 
@@ -1508,6 +1522,13 @@ export class AgentSession {
 		return this._getCallableTools().map((t) => t.name);
 	}
 
+	getActiveShellToolName(): ShellToolName {
+		const activeToolNames = this.getActiveToolNames();
+		if (activeToolNames.includes("pwsh")) return "pwsh";
+		if (activeToolNames.includes("bash")) return "bash";
+		return this._defaultShellTool;
+	}
+
 	/**
 	 * Get all configured tools with name, description, parameter schema, prompt guidelines, and source metadata.
 	 */
@@ -1536,6 +1557,10 @@ export class AgentSession {
 	 * Changes take effect on the next agent turn.
 	 */
 	setActiveToolsByName(toolNames: string[]): void {
+		const requested = new Set(toolNames.filter((name) => this._toolRegistry.has(name)));
+		if (requested.has("bash") && requested.has("pwsh")) {
+			throw new Error("Only one shell tool can be active at a time. Choose either 'bash' or 'pwsh'.");
+		}
 		const previous = this.getActiveToolNames();
 		this._setActiveTools(toolNames);
 		// A loadout that deactivates a tool replaces the restored one, whose pending tools are dropped.
@@ -3681,6 +3706,7 @@ export class AgentSession {
 			: createAllToolDefinitions(this._cwd, {
 					read: { autoResizeImages },
 					bash: { commandPrefix: shellCommandPrefix, shellPath },
+					pwsh: { commandPrefix: shellCommandPrefix, shellPath },
 				});
 
 		this._baseToolDefinitions = new Map(
@@ -3709,7 +3735,7 @@ export class AgentSession {
 
 		const defaultActiveToolNames = this._baseToolsOverride
 			? Object.keys(this._baseToolsOverride)
-			: ["read", "bash", "edit", "write"];
+			: ["read", this._defaultShellTool, "edit", "write"];
 		const baseActiveToolNames = options.activeToolNames ?? defaultActiveToolNames;
 		this._refreshToolRegistry({
 			activeToolNames: baseActiveToolNames,
@@ -3725,7 +3751,8 @@ export class AgentSession {
 		const getDefaultTools = () =>
 			this._usesDefaultTools
 				? applyToolModifiers(
-						this.settingsManager.getDefaultTools() ?? DEFAULT_TOOL_NAMES,
+						this.settingsManager.getDefaultTools() ??
+							DEFAULT_TOOL_NAMES.map((name) => (name === "pwsh" ? this._defaultShellTool : name)),
 						this._defaultToolModifiers,
 					)
 				: [];
@@ -3933,12 +3960,59 @@ export class AgentSession {
 	}
 
 	/**
+	 * Execute a pwsh command.
+	 * Adds result to agent context and session.
+	 */
+	async executePwsh(
+		command: string,
+		onChunk?: (chunk: string) => void,
+		options?: { excludeFromContext?: boolean; operations?: PwshOperations },
+	): Promise<PwshResult> {
+		this._pwshAbortController = new AbortController();
+
+		const prefix = this.settingsManager.getShellCommandPrefix();
+		const shellPath = this.settingsManager.getShellPath();
+		const resolvedCommand = prefix ? `${prefix}\n${command}` : command;
+
+		try {
+			const result = await executePwshWithOperations(
+				resolvedCommand,
+				this.sessionManager.getCwd(),
+				options?.operations ?? createLocalPwshOperations({ shellPath }),
+				{
+					onChunk,
+					signal: this._pwshAbortController.signal,
+				},
+			);
+
+			this.recordPwshResult(command, result, options);
+			return result;
+		} finally {
+			this._pwshAbortController = undefined;
+		}
+	}
+
+	/**
 	 * Record a bash execution result in session history.
 	 * Used by executeBash and by extensions that handle bash execution themselves.
 	 */
 	recordBashResult(command: string, result: BashResult, options?: { excludeFromContext?: boolean }): void {
+		this._recordShellResult("bash", command, result, options);
+	}
+
+	recordPwshResult(command: string, result: PwshResult, options?: { excludeFromContext?: boolean }): void {
+		this._recordShellResult("pwsh", command, result, options);
+	}
+
+	private _recordShellResult(
+		shell: ShellToolName,
+		command: string,
+		result: BashResult,
+		options?: { excludeFromContext?: boolean },
+	): void {
 		const bashMessage: BashExecutionMessage = {
 			role: "bashExecution",
+			shell,
 			command,
 			output: result.output,
 			exitCode: result.exitCode,
@@ -3968,9 +4042,17 @@ export class AgentSession {
 		}
 	}
 
+	abortPwsh(): void {
+		this._pwshAbortController?.abort();
+	}
+
 	/** Whether a bash command is currently running */
 	get isBashRunning(): boolean {
 		return this._bashAbortControllers.size > 0;
+	}
+
+	get isPwshRunning(): boolean {
+		return this._pwshAbortController !== undefined;
 	}
 
 	/** Whether there are pending bash messages waiting to be flushed */

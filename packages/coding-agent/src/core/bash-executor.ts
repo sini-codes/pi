@@ -11,6 +11,7 @@ import { splitIncompleteAnsiSuffix, stripAnsi } from "../utils/ansi.ts";
 import { createOutputFileStream } from "../utils/output-files.ts";
 import { sanitizeBinaryOutput } from "../utils/shell.ts";
 import type { BashOperations } from "./tools/bash.ts";
+import type { PwshOperations } from "./tools/pwsh.ts";
 import { DEFAULT_MAX_BYTES, truncateTail } from "./tools/truncate.ts";
 
 // ============================================================================
@@ -37,19 +38,21 @@ export interface BashResult {
 	fullOutputPath?: string;
 }
 
+export type PwshExecutorOptions = BashExecutorOptions;
+export type PwshResult = BashResult;
+
 // ============================================================================
 // Implementation
 // ============================================================================
 
-/**
- * Execute a bash command using custom BashOperations.
- * Used for remote execution (SSH, containers, etc.).
- */
-export async function executeBashWithOperations(
+type ShellOperations = BashOperations | PwshOperations;
+
+async function executeShellWithOperations(
 	command: string,
 	cwd: string,
-	operations: BashOperations,
+	operations: ShellOperations,
 	options?: BashExecutorOptions,
+	tempFilePrefix = "pi-bash",
 ): Promise<BashResult> {
 	const outputChunks: string[] = [];
 	let outputBytes = 0;
@@ -63,7 +66,7 @@ export async function executeBashWithOperations(
 		if (tempFilePath) {
 			return;
 		}
-		({ path: tempFilePath, stream: tempFileStream } = createOutputFileStream("pi-bash", ".log"));
+		({ path: tempFilePath, stream: tempFileStream } = createOutputFileStream(tempFilePrefix, ".log"));
 		for (const chunk of outputChunks) {
 			tempFileStream.write(chunk);
 		}
@@ -143,4 +146,30 @@ export async function executeBashWithOperations(
 		truncated: truncationResult.truncated,
 		fullOutputPath: tempFilePath,
 	};
+}
+
+/**
+ * Execute a bash command using custom BashOperations.
+ * Used for remote execution (SSH, containers, etc.).
+ */
+export async function executeBashWithOperations(
+	command: string,
+	cwd: string,
+	operations: BashOperations,
+	options?: BashExecutorOptions,
+): Promise<BashResult> {
+	return executeShellWithOperations(command, cwd, operations, options, "pi-bash");
+}
+
+/**
+ * Execute a pwsh command using custom PwshOperations.
+ * Used for remote execution (SSH, containers, etc.).
+ */
+export async function executePwshWithOperations(
+	command: string,
+	cwd: string,
+	operations: PwshOperations,
+	options?: PwshExecutorOptions,
+): Promise<PwshResult> {
+	return executeShellWithOperations(command, cwd, operations, options, "pi-pwsh");
 }

@@ -20,6 +20,7 @@ import type {
 	QuietStartup,
 	SessionShareDestination,
 	Settings,
+	ShellToolSetting,
 	ThinkingBudgetsSettings,
 	TransportSetting,
 	TuiMode,
@@ -44,6 +45,7 @@ export type {
 	RetrySettings,
 	SessionShareDestination,
 	Settings,
+	ShellToolSetting,
 	TerminalSettings,
 	ThinkingBudgetsSettings,
 	TransportSetting,
@@ -82,7 +84,7 @@ function deepMergeObjects(base: Record<string, unknown>, overrides: Record<strin
 }
 
 /** Tools enabled at startup when `defaultTools` does not change them. */
-export const DEFAULT_TOOL_NAMES: readonly string[] = ["read", "bash", "edit", "write"];
+export const DEFAULT_TOOL_NAMES: readonly string[] = ["read", "pwsh", "edit", "write"];
 
 /** Whether a tool selection entry is a `+name` or `-name` modifier. */
 export function isToolModifier(entry: unknown): boolean {
@@ -985,6 +987,16 @@ export class SettingsManager {
 	getShellPath(): string | undefined {
 		const shellPath = this.settings.shellPath;
 		return shellPath ? normalizePath(shellPath) : shellPath;
+	}
+
+	getShellTool(): ShellToolSetting {
+		return this.settings.shellTool ?? "pwsh";
+	}
+
+	setShellTool(shellTool: ShellToolSetting): void {
+		this.globalSettings.shellTool = shellTool;
+		this.markModified("shellTool");
+		this.save();
 	}
 
 	setShellPath(path: string | undefined): void {

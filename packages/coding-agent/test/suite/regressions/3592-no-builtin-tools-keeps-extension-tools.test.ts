@@ -70,6 +70,16 @@ describe("regression #3592: no-builtin-tools keeps extension tools enabled", () 
 		return session;
 	}
 
+	it("uses pwsh by default while keeping extension tools active", async () => {
+		const session = await createSession();
+
+		expect(session.getActiveToolNames()).toEqual(["read", "pwsh", "edit", "write", "dynamic_tool"]);
+		expect(session.systemPrompt).toContain("- pwsh:");
+		expect(session.systemPrompt).toContain("- dynamic_tool: Run dynamic test behavior");
+		expect(session.systemPrompt).not.toContain("- bash:");
+		session.dispose();
+	});
+
 	it("keeps extension tools active when built-in defaults are disabled", async () => {
 		const session = await createSession({ noTools: "builtin" });
 
@@ -78,7 +88,7 @@ describe("regression #3592: no-builtin-tools keeps extension tools enabled", () 
 				.getAllTools()
 				.map((tool) => tool.name)
 				.sort(),
-		).toEqual(["bash", "dynamic_tool", "edit", "find", "grep", "ls", "powershell", "read", "write"]);
+		).toEqual(["bash", "dynamic_tool", "edit", "find", "grep", "ls", "powershell", "pwsh", "read", "write"]);
 		expect(session.getActiveToolNames()).toEqual(["dynamic_tool"]);
 		expect(session.systemPrompt).toContain("- dynamic_tool: Run dynamic test behavior");
 		expect(session.systemPrompt).not.toContain("- read:");

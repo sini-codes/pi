@@ -20,6 +20,7 @@ const PREVIEW_LINES = 20;
 
 export class BashExecutionComponent extends Container {
 	private command: string;
+	private shell: "bash" | "pwsh";
 	private outputLines: string[] = [];
 	private status: "running" | "complete" | "cancelled" | "error" = "running";
 	private exitCode: number | undefined = undefined;
@@ -32,9 +33,10 @@ export class BashExecutionComponent extends Container {
 	private readonly colorKey: "dim" | "bashMode";
 	private outputPad: number;
 
-	constructor(command: string, ui: TUI, excludeFromContext = false, outputPad = 1) {
+	constructor(command: string, ui: TUI, excludeFromContext = false, outputPad = 1, shell: "bash" | "pwsh" = "bash") {
 		super();
 		this.command = command;
+		this.shell = shell;
 		this.colorKey = excludeFromContext ? "dim" : "bashMode";
 		this.outputPad = outputPad;
 		const borderColor = (str: string) => theme.fg(this.colorKey, str);
@@ -138,7 +140,7 @@ export class BashExecutionComponent extends Container {
 		this.contentContainer.clear();
 
 		// Command header
-		const header = new Text(theme.fg(this.colorKey, theme.bold(`$ ${this.command}`)), this.outputPad, 0);
+		const header = new Text(theme.fg(this.colorKey, theme.bold(`${this.promptPrefix()} ${this.command}`)), this.outputPad, 0);
 		this.contentContainer.addChild(header);
 
 		// Output
@@ -219,5 +221,9 @@ export class BashExecutionComponent extends Container {
 	 */
 	getCommand(): string {
 		return this.command;
+	}
+
+	private promptPrefix(): string {
+		return this.shell === "pwsh" ? "PS>" : "$";
 	}
 }

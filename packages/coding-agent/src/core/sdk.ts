@@ -23,6 +23,7 @@ import {
 	getToolListError,
 	isToolModifier,
 	SettingsManager,
+	type ShellToolSetting,
 } from "./settings-manager.ts";
 import { time } from "./timings.ts";
 import {
@@ -33,6 +34,7 @@ import {
 	createGrepTool,
 	createLsTool,
 	createPowerShellTool,
+	createPwshTool,
 	createReadOnlyTools,
 	createReadTool,
 	createWriteTool,
@@ -65,7 +67,7 @@ export interface CreateAgentSessionOptions {
 	 * Optional default tool suppression mode when no explicit allowlist is provided.
 	 *
 	 * - "all": start with no tools enabled
-	 * - "builtin": disable the default built-in tools (read, bash, edit, write)
+	 * - "builtin": disable the default built-in tools (read, pwsh, edit, write)
 	 *   but keep extension/custom tools enabled
 	 */
 	noTools?: "all" | "builtin";
@@ -74,7 +76,7 @@ export interface CreateAgentSessionOptions {
 	 *
 	 * When omitted, pi uses the resolved `defaultTools` setting for the initial
 	 * selection when configured. Otherwise it enables the default built-in tools
-	 * (read, bash, edit, write). Extension/custom tools remain enabled unless
+	 * (read, pwsh, edit, write). Extension/custom tools remain enabled unless
 	 * `noTools` changes that default. When provided, only matching tools are
 	 * enabled. MCP tools stay registered for codemode and tool search unless an
 	 * entry starts with `mcp__`; then only matching MCP tools are kept. An empty
@@ -90,6 +92,8 @@ export interface CreateAgentSessionOptions {
 	 * provided, MCP tools included.
 	 */
 	excludeTools?: string[];
+	/** Default shell tool when no explicit tools allowlist is provided. Default: settings shellTool or "pwsh". */
+	shellTool?: ShellToolSetting;
 	/** Custom tools to register (in addition to built-in tools). */
 	customTools?: ToolDefinition[];
 
@@ -139,6 +143,7 @@ export {
 	createReadOnlyTools,
 	createReadTool,
 	createBashTool,
+	createPwshTool,
 	createEditTool,
 	createWriteTool,
 	createGrepTool,
@@ -279,7 +284,9 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 
 	const toolListError = options.tools ? getToolListError(options.tools) : undefined;
 	if (toolListError) throw new Error(`Invalid tools option: ${toolListError}`);
-	const defaultToolNames = options.noTools ? [] : (settingsManager.getDefaultTools() ?? DEFAULT_TOOL_NAMES);
+	const shellTool = options.shellTool ?? settingsManager.getShellTool();
+	const defaultActiveToolNames = DEFAULT_TOOL_NAMES.map((name) => (name === "pwsh" ? shellTool : name));
+	const defaultToolNames = options.noTools ? [] : (settingsManager.getDefaultTools() ?? defaultActiveToolNames);
 	// A `tools` list of only `+name`/`-name` entries changes the default selection instead of
 	// replacing it, like the `defaultTools` setting.
 	const toolModifiers = options.tools?.some(isToolModifier) ? options.tools : undefined;
@@ -465,6 +472,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		defaultToolModifiers: toolModifiers,
 		allowedToolNames,
 		excludedToolNames,
+		defaultShellTool: shellTool,
 		extensionRunnerRef,
 		sessionStartEvent: options.sessionStartEvent,
 	});

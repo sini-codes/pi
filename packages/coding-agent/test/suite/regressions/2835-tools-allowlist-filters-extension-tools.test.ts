@@ -91,4 +91,8 @@ describe("regression #2835: tool allowlists filter extension tools", () => {
 		expect(session.systemPrompt).not.toContain("dynamic_tool");
 		session.dispose();
 	});
+
+	it("rejects enabling bash and pwsh together", async () => {
+		await expect(createSession(["bash", "pwsh"])).rejects.toThrow("Only one shell tool can be active at a time");
+	});
 });

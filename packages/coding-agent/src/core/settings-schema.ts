@@ -252,9 +252,15 @@ export const SettingsSchema = Type.Object(
 		externalEditor: Type.Optional(
 			Type.String({ description: "Command for Ctrl+G external editor; takes precedence over VISUAL and EDITOR." }),
 		),
+		shellTool: Type.Optional(
+			Type.Union([Type.Literal("bash"), Type.Literal("pwsh")], {
+				description: "Default active shell tool.",
+				default: "pwsh",
+			}),
+		),
 		shellPath: Type.Optional(
 			Type.String({
-				description: "Custom shell path, for example for Cygwin on Windows, with support for leading ~ expansion.",
+				description: "Custom shell path for the active shell, with support for leading ~ expansion.",
 			}),
 		),
 		quietStartup: Type.Optional(
@@ -469,6 +475,7 @@ export interface WarningSettings extends Static<typeof WarningSettingsSchema> {}
 export type CodemodeMode = Static<typeof CodemodeModeSchema>;
 export interface CodemodeSettings extends Static<typeof CodemodeSettingsSchema> {}
 export type DefaultProjectTrust = NonNullable<SettingsInput["defaultProjectTrust"]>;
+export type ShellToolSetting = NonNullable<SettingsInput["shellTool"]>;
 export type QuietStartup = NonNullable<SettingsInput["quietStartup"]>;
 export type TransportSetting = NonNullable<SettingsInput["transport"]>;
 export type SessionShareDestination = NonNullable<SettingsInput["sessionShareDestination"]>;
