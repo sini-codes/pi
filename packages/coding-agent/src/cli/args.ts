@@ -8,6 +8,7 @@ import { APP_NAME, CONFIG_DIR_NAME, ENV_AGENT_DIR, ENV_SESSION_DIR } from "../co
 import type { ExtensionFlag } from "../core/extensions/types.ts";
 
 export type Mode = "text" | "json" | "rpc";
+export type ShellToolArg = "bash" | "pwsh";
 
 export interface Args {
 	provider?: string;
@@ -30,6 +31,7 @@ export interface Args {
 	models?: string[];
 	tools?: string[];
 	excludeTools?: string[];
+	shell?: ShellToolArg;
 	noTools?: boolean;
 	noBuiltinTools?: boolean;
 	extensions?: string[];
@@ -127,6 +129,16 @@ export function parseArgs(args: string[]): Args {
 				.split(",")
 				.map((s) => s.trim())
 				.filter((name) => name.length > 0);
+		} else if (arg === "--shell" && i + 1 < args.length) {
+			const shell = args[++i];
+			if (shell === "bash" || shell === "pwsh") {
+				result.shell = shell;
+			} else {
+				result.diagnostics.push({
+					type: "error",
+					message: `Invalid shell "${shell}". Valid values: bash, pwsh`,
+				});
+			}
 		} else if (arg === "--thinking" && i + 1 < args.length) {
 			const level = args[++i];
 			if (isValidThinkingLevel(level)) {
@@ -220,7 +232,7 @@ export function printHelp(extensionFlags?: ExtensionFlag[]): void {
 					})
 					.join("\n")}\n`
 			: "";
-	console.log(`${chalk.bold(APP_NAME)} - AI coding assistant with read, bash, edit, write tools
+	console.log(`${chalk.bold(APP_NAME)} - AI coding assistant with read, pwsh, edit, write tools
 
 ${chalk.bold("Usage:")}
   ${APP_NAME} [options] [@files...] [messages...]
@@ -258,6 +270,7 @@ ${chalk.bold("Options:")}
                                  Applies to built-in, extension, and custom tools
   --exclude-tools, -xt <tools>   Comma-separated denylist of tool names to disable
                                  Applies to built-in, extension, and custom tools
+  --shell <bash|pwsh>            Select the default shell tool (default: pwsh)
   --thinking <level>             Set thinking level: off, minimal, low, medium, high, xhigh, max
   --extension, -e <path>         Load an extension file (can be used multiple times)
   --no-extensions, -ne           Disable extension discovery (explicit -e paths still work)
@@ -328,6 +341,9 @@ ${chalk.bold("Examples:")}
   # Disable one tool while keeping the rest available
   ${APP_NAME} --exclude-tools ask_question
 
+  # Use PowerShell instead of bash as the active shell tool
+  ${APP_NAME} --shell pwsh
+
   # Export a session file to HTML
   ${APP_NAME} --export ~/${CONFIG_DIR_NAME}/agent/sessions/--path--/session.jsonl
   ${APP_NAME} --export session.jsonl output.html
@@ -384,6 +400,7 @@ ${chalk.bold("Environment Variables:")}
 ${chalk.bold("Built-in Tool Names:")}
   read   - Read file contents
   bash   - Execute bash commands
+  pwsh   - Execute PowerShell commands
   edit   - Edit files with find/replace
   write  - Write files (creates/overwrites)
   grep   - Search file contents (read-only, off by default)

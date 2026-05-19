@@ -214,6 +214,7 @@ export {
 	createFindTool,
 	createGrepTool,
 	createLsTool,
+	createPwshTool,
 	createReadOnlyTools,
 	createReadTool,
 	createWriteTool,
@@ -253,6 +254,7 @@ export {
 	type RetrySettings,
 	SettingsManager,
 	type SettingsManagerCreateOptions,
+	type ShellToolSetting,
 } from "./core/settings-manager.ts";
 // Skills
 export {
@@ -279,7 +281,9 @@ export {
 	createFindToolDefinition,
 	createGrepToolDefinition,
 	createLocalBashOperations,
+	createLocalPwshOperations,
 	createLsToolDefinition,
+	createPwshToolDefinition,
 	createReadToolDefinition,
 	createWriteToolDefinition,
 	DEFAULT_MAX_BYTES,
@@ -301,6 +305,12 @@ export {
 	type LsToolDetails,
 	type LsToolInput,
 	type LsToolOptions,
+	type PwshOperations,
+	type PwshSpawnContext,
+	type PwshSpawnHook,
+	type PwshToolDetails,
+	type PwshToolInput,
+	type PwshToolOptions,
 	type ReadOperations,
 	type ReadToolDetails,
 	type ReadToolInput,

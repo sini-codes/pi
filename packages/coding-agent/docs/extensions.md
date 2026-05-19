@@ -72,6 +72,10 @@ export default function (pi: ExtensionAPI) {
       const ok = await ctx.ui.confirm("Dangerous!", "Allow rm -rf?");
       if (!ok) return { block: true, reason: "Blocked by user" };
     }
+    if (event.toolName === "pwsh" && event.input.command?.includes("Remove-Item -Recurse")) {
+      const ok = await ctx.ui.confirm("Dangerous!", "Allow recursive removal?");
+      if (!ok) return { block: true, reason: "Blocked by user" };
+    }
   });
 
   // Register a custom tool

@@ -14,7 +14,7 @@ import { mergeProviderAttributionHeaders } from "./provider-attribution.ts";
 import type { ResourceLoader } from "./resource-loader.ts";
 import { DefaultResourceLoader } from "./resource-loader.ts";
 import { getDefaultSessionDir, SessionManager } from "./session-manager.ts";
-import { SettingsManager } from "./settings-manager.ts";
+import { SettingsManager, type ShellToolSetting } from "./settings-manager.ts";
 import { time } from "./timings.ts";
 import {
 	createBashTool,
@@ -23,6 +23,7 @@ import {
 	createFindTool,
 	createGrepTool,
 	createLsTool,
+	createPwshTool,
 	createReadOnlyTools,
 	createReadTool,
 	createWriteTool,
@@ -55,20 +56,22 @@ export interface CreateAgentSessionOptions {
 	 * Optional default tool suppression mode when no explicit allowlist is provided.
 	 *
 	 * - "all": start with no tools enabled
-	 * - "builtin": disable the default built-in tools (read, bash, edit, write)
+	 * - "builtin": disable the default built-in tools (read, pwsh, edit, write)
 	 *   but keep extension/custom tools enabled
 	 */
 	noTools?: "all" | "builtin";
 	/**
 	 * Optional allowlist of tool names.
 	 *
-	 * When omitted, pi enables the default built-in tools (read, bash, edit, write)
+	 * When omitted, pi enables the default built-in tools (read, pwsh, edit, write)
 	 * and leaves extension/custom tools enabled unless `noTools` changes that default.
 	 * When provided, only the listed tool names are enabled.
 	 */
 	tools?: string[];
 	/** Optional denylist of tool names to disable. Applies after `tools` when both are provided. */
 	excludeTools?: string[];
+	/** Default shell tool when no explicit tools allowlist is provided. Default: settings shellTool or "pwsh". */
+	shellTool?: ShellToolSetting;
 	/** Custom tools to register (in addition to built-in tools). */
 	customTools?: ToolDefinition[];
 
@@ -118,6 +121,7 @@ export {
 	createReadOnlyTools,
 	createReadTool,
 	createBashTool,
+	createPwshTool,
 	createEditTool,
 	createWriteTool,
 	createGrepTool,
@@ -242,7 +246,8 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		thinkingLevel = clampThinkingLevel(model, thinkingLevel) as ThinkingLevel;
 	}
 
-	const defaultActiveToolNames: ToolName[] = ["read", "bash", "edit", "write"];
+	const shellTool = options.shellTool ?? settingsManager.getShellTool();
+	const defaultActiveToolNames: ToolName[] = ["read", shellTool, "edit", "write"];
 	const allowedToolNames = options.tools ?? (options.noTools === "all" ? [] : undefined);
 	const excludedToolNames = options.excludeTools;
 	const excludedToolNameSet = excludedToolNames ? new Set(excludedToolNames) : undefined;
@@ -385,6 +390,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		initialActiveToolNames,
 		allowedToolNames,
 		excludedToolNames,
+		defaultShellTool: shellTool,
 		extensionRunnerRef,
 		sessionStartEvent: options.sessionStartEvent,
 	});

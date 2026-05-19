@@ -1,7 +1,7 @@
 {
 	"name": "@earendil-works/pi-coding-agent",
 	"version": "0.82.1",
-	"description": "Coding agent CLI with read, bash, edit, write tools and session management",
+	"description": "Coding agent CLI with read, pwsh, edit, write tools and session management",
 	"type": "module",
 	"piConfig": {
 		"configDir": ".pi"

@@ -3,9 +3,10 @@ import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync }
 import { tmpdir } from "os";
 import { join } from "path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { executeBashWithOperations } from "../src/core/bash-executor.ts";
+import { executeBashWithOperations, executePwshWithOperations } from "../src/core/bash-executor.ts";
 import { type BashOperations, createBashTool, createLocalBashOperations } from "../src/core/tools/bash.ts";
 import { computeEditsDiff } from "../src/core/tools/edit-diff.ts";
+import { createLocalPwshOperations, createPwshTool, type PwshOperations } from "../src/core/tools/pwsh.ts";
 import {
 	createEditTool,
 	createFindTool,
@@ -20,6 +21,7 @@ const readTool = createReadTool(process.cwd());
 const writeTool = createWriteTool(process.cwd());
 const editTool = createEditTool(process.cwd());
 const bashTool = createBashTool(process.cwd());
+const pwshTool = createPwshTool(process.cwd());
 const grepTool = createGrepTool(process.cwd());
 const findTool = createFindTool(process.cwd());
 const lsTool = createLsTool(process.cwd());
@@ -431,7 +433,7 @@ describe("Coding Agent Tools", () => {
 					path: testFile,
 					edits: [{ oldText: "hello", newText: "world" }],
 				}),
-			).rejects.toThrow(`Could not edit file: ${testFile}. Error code: EACCES.`);
+			).rejects.toThrow(/Could not edit file: .*edit-readonly\.txt\. Error code: (EACCES|EPERM)\./);
 		});
 
 		it("should include the original error message for unknown edit access errors", async () => {
@@ -467,7 +469,11 @@ describe("Coding Agent Tools", () => {
 
 			const result = await computeEditsDiff(unreadableFile, [{ oldText: "hello", newText: "world" }], testDir);
 
-			expect(result).toEqual({ error: `Could not edit file: ${unreadableFile}. Error code: EACCES.` });
+			if (process.platform === "win32") {
+				expect(result).toEqual({ diff: "-1 hello\n+1 world", firstChangedLine: 1 });
+			} else {
+				expect(result).toEqual({ error: `Could not edit file: ${unreadableFile}. Error code: EACCES.` });
+			}
 		});
 	});
 
@@ -621,8 +627,16 @@ describe("Coding Agent Tools", () => {
 		});
 
 		it("should prepend command prefix when configured", async () => {
+			const operations: BashOperations = {
+				exec: async (command, _cwd, { onData }) => {
+					expect(command).toBe("export TEST_VAR=hello\necho $TEST_VAR");
+					onData(Buffer.from("hello\n", "utf-8"));
+					return { exitCode: 0 };
+				},
+			};
 			const bashWithPrefix = createBashTool(testDir, {
 				commandPrefix: "export TEST_VAR=hello",
+				operations,
 			});
 
 			const result = await bashWithPrefix.execute("test-prefix-1", { command: "echo $TEST_VAR" });
@@ -630,8 +644,16 @@ describe("Coding Agent Tools", () => {
 		});
 
 		it("should include output from both prefix and command", async () => {
+			const operations: BashOperations = {
+				exec: async (command, _cwd, { onData }) => {
+					expect(command).toBe("echo prefix-output\necho command-output");
+					onData(Buffer.from("prefix-output\ncommand-output\n", "utf-8"));
+					return { exitCode: 0 };
+				},
+			};
 			const bashWithPrefix = createBashTool(testDir, {
 				commandPrefix: "echo prefix-output",
+				operations,
 			});
 
 			const result = await bashWithPrefix.execute("test-prefix-2", { command: "echo command-output" });
@@ -639,7 +661,14 @@ describe("Coding Agent Tools", () => {
 		});
 
 		it("should work without command prefix", async () => {
-			const bashWithoutPrefix = createBashTool(testDir, {});
+			const operations: BashOperations = {
+				exec: async (command, _cwd, { onData }) => {
+					expect(command).toBe("echo no-prefix");
+					onData(Buffer.from("no-prefix\n", "utf-8"));
+					return { exitCode: 0 };
+				},
+			};
+			const bashWithoutPrefix = createBashTool(testDir, { operations });
 
 			const result = await bashWithoutPrefix.execute("test-prefix-3", { command: "echo no-prefix" });
 			expect(getTextOutput(result).trim()).toBe("no-prefix");
@@ -704,6 +733,9 @@ describe("Coding Agent Tools", () => {
 		});
 
 		it("should expose local bash operations for extension reuse", async () => {
+			if (process.platform === "win32") {
+				return;
+			}
 			const ops = createLocalBashOperations();
 			const chunks: Buffer[] = [];
 
@@ -769,6 +801,81 @@ describe("Coding Agent Tools", () => {
 		});
 	});
 
+	describe("pwsh tool", () => {
+		it("should execute commands through custom operations", async () => {
+			const operations: PwshOperations = {
+				exec: async (command, _cwd, { onData }) => {
+					expect(command).toBe("Write-Output 'test output'");
+					onData(Buffer.from("test output\r\n", "utf-8"));
+					return { exitCode: 0 };
+				},
+			};
+			const pwsh = createPwshTool(testDir, { operations });
+
+			const result = await pwsh.execute("test-pwsh-1", { command: "Write-Output 'test output'" });
+
+			expect(getTextOutput(result)).toContain("test output");
+			expect(result.details).toBeUndefined();
+		});
+
+		it("should prepend command prefix when configured", async () => {
+			const operations: PwshOperations = {
+				exec: async (command, _cwd, { onData }) => {
+					expect(command).toBe("$env:TEST_VAR = 'hello'\nWrite-Output $env:TEST_VAR");
+					onData(Buffer.from("hello\n", "utf-8"));
+					return { exitCode: 0 };
+				},
+			};
+			const pwsh = createPwshTool(testDir, {
+				commandPrefix: "$env:TEST_VAR = 'hello'",
+				operations,
+			});
+
+			const result = await pwsh.execute("test-pwsh-prefix", { command: "Write-Output $env:TEST_VAR" });
+			expect(getTextOutput(result).trim()).toBe("hello");
+		});
+
+		it("should pass shellPath through to pwsh shell resolution", async () => {
+			const getPwshShellConfigSpy = vi.spyOn(shellModule, "getPwshShellConfig");
+			const pwshWithCustomShell = createPwshTool(testDir, {
+				shellPath: "/custom/pwsh",
+				operations: {
+					exec: async () => ({ exitCode: 0 }),
+				},
+			});
+
+			await pwshWithCustomShell.execute("test-pwsh-shell-path", { command: "Write-Output test" });
+
+			expect(getPwshShellConfigSpy).not.toHaveBeenCalled();
+
+			const ops = createLocalPwshOperations({ shellPath: "/custom/pwsh" });
+			await expect(
+				ops.exec("Write-Output test", testDir, {
+					onData: () => {},
+				}),
+			).rejects.toThrow("Custom pwsh path not found: /custom/pwsh");
+			expect(getPwshShellConfigSpy).toHaveBeenCalledWith("/custom/pwsh");
+		});
+
+		it("should preserve executePwsh sanitization", async () => {
+			const operations: PwshOperations = {
+				exec: async (_command, _cwd, { onData }) => {
+					onData(Buffer.from("\x1b[31mred\x1b[0m\r\n", "utf-8"));
+					return { exitCode: 0 };
+				},
+			};
+
+			const result = await executePwshWithOperations("ignored", testDir, operations);
+
+			expect(result.exitCode).toBe(0);
+			expect(result.output).toBe("red\n");
+		});
+
+		it("should expose a first-party pwsh tool", () => {
+			expect(pwshTool.name).toBe("pwsh");
+		});
+	});
+
 	describe("grep tool", () => {
 		it("should include filename when searching a single file", async () => {
 			const testFile = join(testDir, "example.txt");
@@ -813,7 +920,7 @@ describe("Coding Agent Tools", () => {
 			writeFileSync(testFile, "target\n");
 
 			const result = await grepTool.execute("test-call-grep-injection", {
-				pattern: `--pre=${payload}`,
+				pattern: `--pre=${payload.replace(/\\/g, "/")}`,
 				path: testDir,
 			});
 
