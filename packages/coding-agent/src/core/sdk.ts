@@ -16,7 +16,7 @@ import { mergeProviderAttributionHeaders } from "./provider-attribution.ts";
 import type { ResourceLoader } from "./resource-loader.ts";
 import { DefaultResourceLoader } from "./resource-loader.ts";
 import { getDefaultSessionDir, SessionManager } from "./session-manager.ts";
-import { DEFAULT_TOOL_NAMES, SettingsManager } from "./settings-manager.ts";
+import { DEFAULT_TOOL_NAMES, SettingsManager, type ShellToolSetting } from "./settings-manager.ts";
 import { time } from "./timings.ts";
 import {
 	createBashTool,
@@ -26,6 +26,7 @@ import {
 	createGrepTool,
 	createLsTool,
 	createPowerShellTool,
+	createPwshTool,
 	createReadOnlyTools,
 	createReadTool,
 	createWriteTool,
@@ -58,7 +59,7 @@ export interface CreateAgentSessionOptions {
 	 * Optional default tool suppression mode when no explicit allowlist is provided.
 	 *
 	 * - "all": start with no tools enabled
-	 * - "builtin": disable the default built-in tools (read, bash, edit, write)
+	 * - "builtin": disable the default built-in tools (read, pwsh, edit, write)
 	 *   but keep extension/custom tools enabled
 	 */
 	noTools?: "all" | "builtin";
@@ -67,13 +68,15 @@ export interface CreateAgentSessionOptions {
 	 *
 	 * When omitted, pi uses the resolved `defaultTools` setting for the initial
 	 * selection when configured. Otherwise it enables the default built-in tools
-	 * (read, bash, edit, write). Extension/custom tools remain enabled unless
+	 * (read, pwsh, edit, write). Extension/custom tools remain enabled unless
 	 * `noTools` changes that default. When provided, only the listed tool names are
 	 * enabled.
 	 */
 	tools?: string[];
 	/** Optional denylist of tool names to disable. Applies after `tools` when both are provided. */
 	excludeTools?: string[];
+	/** Default shell tool when no explicit tools allowlist is provided. Default: settings shellTool or "pwsh". */
+	shellTool?: ShellToolSetting;
 	/** Custom tools to register (in addition to built-in tools). */
 	customTools?: ToolDefinition[];
 
@@ -123,6 +126,7 @@ export {
 	createReadOnlyTools,
 	createReadTool,
 	createBashTool,
+	createPwshTool,
 	createEditTool,
 	createWriteTool,
 	createGrepTool,
@@ -261,12 +265,14 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		thinkingLevel = clampThinkingLevel(model, thinkingLevel) as ThinkingLevel;
 	}
 
+	const shellTool = options.shellTool ?? settingsManager.getShellTool();
+	const defaultActiveToolNames = DEFAULT_TOOL_NAMES.map((name) => (name === "pwsh" ? shellTool : name));
 	const configuredDefaultToolNames = settingsManager.getDefaultTools();
 	const allowedToolNames = options.tools ?? (options.noTools === "all" ? [] : undefined);
 	const excludedToolNames = options.excludeTools;
 	const excludedToolNameSet = excludedToolNames ? new Set(excludedToolNames) : undefined;
 	const initialActiveToolNames = (
-		options.tools ?? (options.noTools ? [] : (configuredDefaultToolNames ?? DEFAULT_TOOL_NAMES))
+		options.tools ?? (options.noTools ? [] : (configuredDefaultToolNames ?? defaultActiveToolNames))
 	).filter((name) => !excludedToolNameSet?.has(name));
 
 	// Create convertToLlm wrapper that filters images if blockImages is enabled (defense-in-depth)
@@ -447,6 +453,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		initialActiveToolNames,
 		allowedToolNames,
 		excludedToolNames,
+		defaultShellTool: shellTool,
 		extensionRunnerRef,
 		sessionStartEvent: options.sessionStartEvent,
 	});

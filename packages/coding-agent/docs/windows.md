@@ -2,6 +2,10 @@
 
 Run Pi either as a native Windows process or inside Windows Subsystem for Linux (WSL). Native Windows uses Git Bash by default for Bash commands and can optionally expose PowerShell to the model. Pi inside WSL uses the Linux environment and its Bash installation.
 
+## pwsh fork default
+
+This build ships PowerShell Core as the default shell tool (`pwsh`). Install [PowerShell 7](https://learn.microsoft.com/powershell/scripting/install/installing-powershell) and make sure `pwsh` is on `PATH`. The `!` and `!!` editor commands run through the active shell tool. Use `pi --shell bash` (or `"shellTool": "bash"` in settings) to switch back to Bash. Only one shell tool can be active at a time, so do not enable `bash` and `pwsh` together.
+
 Follow the main [Quickstart](quickstart.md) to install and authenticate Pi. Use this page to choose and configure its command environment.
 
 ## Choose native Windows or WSL

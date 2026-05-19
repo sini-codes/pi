@@ -187,6 +187,7 @@ export class OutputAccumulator {
 	}
 
 	private appendDecodedText(text: string): void {
+		text = text.replace(/\r/g, "");
 		if (text.length === 0) {
 			return;
 		}

@@ -18,6 +18,8 @@ export const BRANCH_SUMMARY_SUFFIX = `</summary>`;
 
 export interface BashExecutionMessage {
 	role: "bashExecution";
+	/** Shell backend used for this execution. Missing means legacy bash. */
+	shell?: "bash" | "pwsh";
 	command: string;
 	output: string;
 	exitCode: number | undefined;
@@ -61,7 +63,8 @@ declare module "../types.ts" {
 }
 
 export function bashExecutionToText(msg: BashExecutionMessage): string {
-	let text = `Ran \`${msg.command}\`\n`;
+	const shell = msg.shell ?? "bash";
+	let text = `Ran ${shell} command \`${msg.command}\`\n`;
 	if (msg.output) {
 		text += `\`\`\`\n${msg.output}\n\`\`\``;
 	} else {
