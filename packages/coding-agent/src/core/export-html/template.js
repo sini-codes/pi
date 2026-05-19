@@ -591,6 +591,11 @@
             const cmd = rawCmd.replace(/[\n\t]/g, ' ').trim().slice(0, 50);
             return `[bash: ${cmd}${rawCmd.length > 50 ? '...' : ''}]`;
           }
+          case 'pwsh': {
+            const rawCmd = String(args.command || '');
+            const cmd = rawCmd.replace(/[\n\t]/g, ' ').trim().slice(0, 50);
+            return `[pwsh: ${cmd}${rawCmd.length > 50 ? '...' : ''}]`;
+          }
           case 'grep':
             return `[grep: /${args.pattern || ''}/ in ${shortenPath(String(args.path || '.'))}]`;
           case 'find':
@@ -678,7 +683,7 @@
             }
             if (msg.role === 'bashExecution') {
               const cmd = truncate(normalize(msg.command || ''));
-              return labelHtml + `<span class="tree-role-tool">[bash]:</span> ${escapeHtml(cmd)}`;
+              return labelHtml + `<span class="tree-role-tool">[${escapeHtml(msg.shell || 'bash')}]:</span> ${escapeHtml(cmd)}`;
             }
             return labelHtml + `<span class="tree-muted">[${escapeHtml(msg.role)}]</span>`;
           }
@@ -937,6 +942,16 @@
             const command = str(args.command);
             const cmdDisplay = command === null ? invalidArg : escapeHtml(command || '...');
             html += `<div class="tool-command">$ ${cmdDisplay}</div>`;
+            if (result) {
+              const output = getResultText().trim();
+              if (output) html += formatExpandableOutput(output, 5);
+            }
+            break;
+          }
+          case 'pwsh': {
+            const command = str(args.command);
+            const cmdDisplay = command === null ? invalidArg : escapeHtml(command || '...');
+            html += `<div class="tool-command">PS> ${cmdDisplay}</div>`;
             if (result) {
               const output = getResultText().trim();
               if (output) html += formatExpandableOutput(output, 5);
@@ -1272,8 +1287,9 @@
 
           if (msg.role === 'bashExecution') {
             const isError = msg.cancelled || (msg.exitCode !== 0 && msg.exitCode !== null);
+            const prompt = msg.shell === 'pwsh' ? 'PS>' : '$';
             let html = `<div class="tool-execution ${isError ? 'error' : 'success'}" id="${entryDomId}">${tsHtml}`;
-            html += `<div class="tool-command">$ ${escapeHtml(msg.command)}</div>`;
+            html += `<div class="tool-command">${prompt} ${escapeHtml(msg.command)}</div>`;
             if (msg.output) html += formatExpandableOutput(msg.output, 10);
             if (msg.cancelled) {
               html += '<div style="color: var(--warning)">(cancelled)</div>';

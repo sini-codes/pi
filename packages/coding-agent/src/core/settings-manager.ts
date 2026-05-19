@@ -60,6 +60,7 @@ export interface WarningSettings {
 }
 
 export type DefaultProjectTrust = "ask" | "always" | "never";
+export type ShellToolSetting = "bash" | "pwsh";
 
 export type TransportSetting = Transport;
 
@@ -95,7 +96,8 @@ export interface Settings {
 	hideThinkingBlock?: boolean;
 	showCacheMissNotices?: boolean; // default: false - show transcript notices for significant prompt-cache misses
 	externalEditor?: string; // Command for Ctrl+G external editor; takes precedence over VISUAL/EDITOR
-	shellPath?: string; // Custom shell path (e.g., for Cygwin users on Windows); supports leading ~ expansion
+	shellTool?: ShellToolSetting; // Default active shell tool (default: "pwsh")
+	shellPath?: string; // Custom shell path for the active shell; supports leading ~ expansion
 	quietStartup?: boolean;
 	defaultProjectTrust?: DefaultProjectTrust; // default: "ask"; global setting only
 	shellCommandPrefix?: string; // Prefix prepended to every bash command (e.g., "shopt -s expand_aliases" for alias support)
@@ -878,6 +880,16 @@ export class SettingsManager {
 	getShellPath(): string | undefined {
 		const shellPath = this.settings.shellPath;
 		return shellPath ? normalizePath(shellPath) : shellPath;
+	}
+
+	getShellTool(): ShellToolSetting {
+		return this.settings.shellTool ?? "pwsh";
+	}
+
+	setShellTool(shellTool: ShellToolSetting): void {
+		this.globalSettings.shellTool = shellTool;
+		this.markModified("shellTool");
+		this.save();
 	}
 
 	setShellPath(path: string | undefined): void {

@@ -58,6 +58,39 @@ function findBashOnPath(): string | null {
 }
 
 /**
+ * Find pwsh executable on PATH (cross-platform)
+ */
+function findPwshOnPath(): string | null {
+	if (process.platform === "win32") {
+		try {
+			const result = spawnSync("where", ["pwsh.exe"], { encoding: "utf-8", timeout: 5000 });
+			if (result.status === 0 && result.stdout) {
+				const firstMatch = result.stdout.trim().split(/\r?\n/)[0];
+				if (firstMatch && existsSync(firstMatch)) {
+					return firstMatch;
+				}
+			}
+		} catch {
+			// Ignore errors
+		}
+		return null;
+	}
+
+	try {
+		const result = spawnSync("which", ["pwsh"], { encoding: "utf-8", timeout: 5000 });
+		if (result.status === 0 && result.stdout) {
+			const firstMatch = result.stdout.trim().split(/\r?\n/)[0];
+			if (firstMatch) {
+				return firstMatch;
+			}
+		}
+	} catch {
+		// Ignore errors
+	}
+	return null;
+}
+
+/**
  * Resolve shell configuration based on platform and an optional explicit shell path.
  * Resolution order:
  * 1. User-specified shellPath
@@ -117,6 +150,46 @@ export function getShellConfig(customShellPath?: string): ShellConfig {
 	}
 
 	return { shell: "sh", args: ["-c"] };
+}
+
+/**
+ * Resolve PowerShell configuration without changing the bash resolver.
+ */
+export function getPwshShellConfig(customShellPath?: string): ShellConfig {
+	if (customShellPath) {
+		if (existsSync(customShellPath)) {
+			return { shell: customShellPath, args: ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command"] };
+		}
+		throw new Error(`Custom pwsh path not found: ${customShellPath}`);
+	}
+
+	const pwshOnPath = findPwshOnPath();
+	if (pwshOnPath) {
+		return { shell: pwshOnPath, args: ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command"] };
+	}
+
+	throw new Error(
+		`No pwsh shell found. Options:\n` +
+			`  1. Install PowerShell 7: https://learn.microsoft.com/powershell/scripting/install/installing-powershell\n` +
+			`  2. Add pwsh to PATH\n` +
+			"  3. Set shellPath in settings.json",
+	);
+}
+
+export function wrapPwshCommand(command: string): string {
+	return [
+		"$ErrorActionPreference = 'Stop'",
+		"$ProgressPreference = 'SilentlyContinue'",
+		"$PSNativeCommandUseErrorActionPreference = $false",
+		"& {",
+		command,
+		"}",
+		"if (-not $?) {",
+		"  if ($LASTEXITCODE -is [int] -and $LASTEXITCODE -ne 0) { exit $LASTEXITCODE }",
+		"  exit 1",
+		"}",
+		"exit 0",
+	].join("\n");
 }
 
 export function getShellEnv(): NodeJS.ProcessEnv {

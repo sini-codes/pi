@@ -795,8 +795,8 @@ class TreeList implements Component {
 						result = theme.fg("muted", `[${toolMsg.toolName ?? "tool"}]`);
 					}
 				} else if (role === "bashExecution") {
-					const bashMsg = msg as { command?: string };
-					result = theme.fg("dim", `[bash]: ${normalize(bashMsg.command ?? "")}`);
+					const bashMsg = msg as { command?: string; shell?: "bash" | "pwsh" };
+					result = theme.fg("dim", `[${bashMsg.shell ?? "bash"}]: ${normalize(bashMsg.command ?? "")}`);
 				} else {
 					result = theme.fg("dim", `[${role}]`);
 				}
@@ -934,6 +934,14 @@ class TreeList implements Component {
 					.trim()
 					.slice(0, 50);
 				return `[bash: ${cmd}${rawCmd.length > 50 ? "..." : ""}]`;
+			}
+			case "pwsh": {
+				const rawCmd = String(args.command || "");
+				const cmd = rawCmd
+					.replace(/[\n\t]/g, " ")
+					.trim()
+					.slice(0, 50);
+				return `[pwsh: ${cmd}${rawCmd.length > 50 ? "..." : ""}]`;
 			}
 			case "grep": {
 				const pattern = String(args.pattern || "");

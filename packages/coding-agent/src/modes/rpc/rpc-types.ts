@@ -8,7 +8,7 @@
 import type { AgentMessage, ThinkingLevel } from "@earendil-works/pi-agent-core";
 import type { ImageContent, Model } from "@earendil-works/pi-ai";
 import type { SessionStats } from "../../core/agent-session.ts";
-import type { BashResult } from "../../core/bash-executor.ts";
+import type { BashResult, PwshResult } from "../../core/bash-executor.ts";
 import type { CompactionResult } from "../../core/compaction/index.ts";
 import type { SessionEntry, SessionTreeNode } from "../../core/session-manager.ts";
 import type { SourceInfo } from "../../core/source-info.ts";
@@ -52,6 +52,9 @@ export type RpcCommand =
 	// Bash
 	| { id?: string; type: "bash"; command: string; excludeFromContext?: boolean }
 	| { id?: string; type: "abort_bash" }
+	// PowerShell
+	| { id?: string; type: "pwsh"; command: string }
+	| { id?: string; type: "abort_pwsh" }
 
 	// Session
 	| { id?: string; type: "get_session_stats" }
@@ -170,6 +173,9 @@ export type RpcResponse =
 	// Bash
 	| { id?: string; type: "response"; command: "bash"; success: true; data: BashResult }
 	| { id?: string; type: "response"; command: "abort_bash"; success: true }
+	// PowerShell
+	| { id?: string; type: "response"; command: "pwsh"; success: true; data: PwshResult }
+	| { id?: string; type: "response"; command: "abort_pwsh"; success: true }
 
 	// Session
 	| { id?: string; type: "response"; command: "get_session_stats"; success: true; data: SessionStats }

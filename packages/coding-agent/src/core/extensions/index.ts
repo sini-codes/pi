@@ -111,6 +111,8 @@ export type {
 	// Provider Registration
 	ProviderConfig,
 	ProviderModelConfig,
+	PwshToolCallEvent,
+	PwshToolResultEvent,
 	ReadToolCallEvent,
 	ReadToolResultEvent,
 	// Commands
@@ -164,6 +166,8 @@ export type {
 	// Events - User Bash
 	UserBashEvent,
 	UserBashEventResult,
+	UserPwshEvent,
+	UserPwshEventResult,
 	WidgetPlacement,
 	WorkingIndicatorOptions,
 	WriteToolCallEvent,
@@ -177,6 +181,7 @@ export {
 	isFindToolResult,
 	isGrepToolResult,
 	isLsToolResult,
+	isPwshToolResult,
 	isReadToolResult,
 	isToolCallEventType,
 	isWriteToolResult,

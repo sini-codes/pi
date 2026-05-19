@@ -8,6 +8,14 @@ Pi requires a bash shell on Windows. Checked locations (in order):
 
 For most users, [Git for Windows](https://git-scm.com/download/win) is sufficient.
 
+PowerShell Core is the default shell tool in this build. Install [PowerShell 7](https://learn.microsoft.com/powershell/scripting/install/installing-powershell) and make sure `pwsh` is on `PATH`.
+
+```powershell
+pi
+```
+
+Use `pi --shell bash` to run with Bash instead. Only one shell tool can be active at a time, so do not enable `bash` and `pwsh` together.
+
 ## Custom Shell Path
 
 ```json

@@ -494,8 +494,8 @@ const { session } = await createAgentSession({ resourceLoader: loader });
 
 Specify which built-in tools to enable:
 
-- Built-in tool names: `read`, `bash`, `edit`, `write`, `grep`, `find`, `ls`
-- Default built-ins: `read`, `bash`, `edit`, `write`
+- Built-in tool names: `read`, `bash`, `pwsh`, `edit`, `write`, `grep`, `find`, `ls`
+- Default built-ins: `read`, `pwsh`, `edit`, `write`
 - `noTools: "all"` disables all tools
 - `noTools: "builtin"` disables default built-ins while keeping extension and custom tools enabled
 - `excludeTools` disables specific built-in, extension, or custom tool names after any `tools` allowlist is applied
@@ -541,6 +541,12 @@ const { session } = await createAgentSession({
   cwd,
   tools: ["read", "bash", "grep"],
   sessionManager: SessionManager.inMemory(cwd),
+});
+
+// Use PowerShell Core as the shell tool instead of bash
+const { session: pwshSession } = await createAgentSession({
+  cwd,
+  shellTool: "pwsh",
 });
 ```
 
