@@ -1,3 +1,21 @@
+# pi — pwsh fork (sini-codes/pi)
+
+> **This is a fork of [earendil-works/pi](https://github.com/earendil-works/pi).** Its sole purpose is to
+> holistically replace `bash` with **PowerShell Core (`pwsh`)** as the agent's shell tool — native pwsh tool,
+> pwsh-aware system prompt, `!`/`!!` shell commands, RPC/SDK/extension surfaces. **Windows only.**
+> Distributed via GitHub Releases on this fork; npm publishing is disabled.
+
+**Install / update (Windows, PowerShell):**
+
+```powershell
+irm https://raw.githubusercontent.com/sini-codes/pi/feat/pwsh-parallel-tool/install.ps1 | iex
+```
+
+Updates: `pi update` (fetches the latest release of this fork), or rerun the one-liner.
+Release workflow for maintainers: [.pi/skills/fork-release.md](.pi/skills/fork-release.md).
+
+---
+
 <p align="center">
   <a href="https://pi.dev">
     <img alt="pi logo" src="https://pi.dev/logo-auto.svg" width="128">
