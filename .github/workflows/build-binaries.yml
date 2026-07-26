@@ -309,7 +309,9 @@ jobs:
     with:
       ref: ${{ github.event.inputs.source_ref || github.event.inputs.tag || github.ref_name }}
 
+  # Fork: npm publishing disabled; distribution is via GitHub Releases only.
   publish-npm:
+    if: ${{ false }}
     runs-on: ubuntu-latest
     needs: [stage-github-release, env-daemons]
     environment: npm-publish
@@ -431,8 +433,6 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - stage-github-release
-      - publish-npm
-      - announce-pi-dev-release
     permissions:
       contents: write
     env:
@@ -465,7 +465,7 @@ jobs:
       - publish-npm
       - announce-pi-dev-release
       - publish-github-release
-    if: ${{ always() && needs.stage-github-release.result != 'skipped' && (needs.stage-github-release.result != 'success' || needs.publish-npm.result != 'success' || needs.announce-pi-dev-release.result != 'success' || needs.publish-github-release.result != 'success') }}
+    if: ${{ always() && needs.stage-github-release.result != 'skipped' && (needs.stage-github-release.result != 'success' || needs.publish-github-release.result != 'success') }}
     permissions:
       contents: write
     env:
