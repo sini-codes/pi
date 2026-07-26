@@ -47,11 +47,14 @@ git tag v<VERSION>
 git push fork feat/pwsh-parallel-tool v<VERSION>
 ```
 
-5. Tag push triggers `.github/workflows/build-binaries.yml`: builds 6 platform binaries and
-   publishes the GitHub release automatically (~10 min). Verify:
+5. Dispatch the build workflow manually — tag pushes do NOT auto-trigger CI on this fork
+   (observed on every release so far). The run builds 6 platform binaries and publishes the
+   GitHub release automatically (~3 min):
 
 ```powershell
-gh run list --repo sini-codes/pi --workflow build-binaries.yml --limit 1
+gh workflow run build-binaries.yml --repo sini-codes/pi --ref v<VERSION> -f tag=v<VERSION>
+gh run list --repo sini-codes/pi --workflow build-binaries.yml --limit 1   # grab run id
+gh run watch <RUN_ID> --repo sini-codes/pi --exit-status
 gh release view v<VERSION> --repo sini-codes/pi
 ```
 
