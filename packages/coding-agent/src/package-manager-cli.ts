@@ -1,3 +1,4 @@
+import { spawn } from "node:child_process";
 import {
 	existsSync,
 	mkdirSync,
@@ -711,6 +712,25 @@ async function runSelfUpdate(command: SelfUpdateCommand): Promise<void> {
 	}
 }
 
+const FORK_INSTALLER_URL = "https://raw.githubusercontent.com/sini-codes/pi/feat/pwsh-parallel-tool/install.ps1";
+
+/** Self-update for standalone binary installs: hand off to the fork installer script and exit. */
+function runBinarySelfUpdate(targetVersion: string): void {
+	if (process.platform !== "win32") {
+		console.error(chalk.red(`Binary self-update is only automated on Windows.`));
+		console.error(chalk.dim(`Download v${targetVersion} from: https://github.com/sini-codes/pi/releases/latest`));
+		process.exitCode = 1;
+		return;
+	}
+	console.log(chalk.dim(`Launching installer for v${targetVersion}... ${APP_NAME} will restart shortly.`));
+	const child = spawn(
+		"powershell.exe",
+		["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", `irm '${FORK_INSTALLER_URL}' | iex`],
+		{ detached: true, stdio: "ignore", windowsHide: false },
+	);
+	child.unref();
+}
+
 function prepareWindowsNpmSelfUpdate(): void {
 	if (process.platform !== "win32") {
 		return;
@@ -1052,6 +1072,13 @@ export async function handlePackageCommand(
 					}
 
 					const installMethod = detectInstallMethod();
+					if (installMethod === "bun-binary") {
+						if (selfUpdatePlan.note) {
+							printSelfUpdateNote(selfUpdatePlan.note);
+						}
+						runBinarySelfUpdate(selfUpdatePlan.version);
+						return true;
+					}
 					if (process.platform === "win32" && installMethod !== "npm" && installMethod !== "pnpm") {
 						console.error(
 							chalk.red(`${APP_NAME} self-update on Windows is only supported for npm and pnpm installs.`),
