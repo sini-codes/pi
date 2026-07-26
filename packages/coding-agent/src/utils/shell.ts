@@ -217,6 +217,11 @@ function resolvePwshShellConfig(customShellPath?: string): ShellConfig {
 		if (programFiles) {
 			knownPaths.push(`${programFiles}\\PowerShell\\7\\pwsh.exe`);
 		}
+		// MSIX/Store installs expose an app-execution alias here (zero-byte reparse point; existsSync sees it)
+		const localAppData = process.env.LOCALAPPDATA;
+		if (localAppData) {
+			knownPaths.push(`${localAppData}\\Microsoft\\WindowsApps\\pwsh.exe`);
+		}
 	} else {
 		knownPaths.push("/usr/bin/pwsh", "/usr/local/bin/pwsh", "/opt/microsoft/powershell/7/pwsh");
 	}
