@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.82.1-pwsh.5] - 2026-07-26
+
+### Fixed
+
+- Fixed the installer failing to update a running pi: files locked by the live process (`pi.exe`, loaded native addons) are now renamed aside instead of overwritten, only locked files are touched, and a failed install rolls back so the install directory never ends up without `pi.exe`.
+
 ## [0.82.1-pwsh.4] - 2026-07-26
 
 ### Fixed
