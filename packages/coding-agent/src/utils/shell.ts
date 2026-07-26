@@ -1,7 +1,25 @@
-import { existsSync } from "node:fs";
+import { accessSync, constants, existsSync } from "node:fs";
 import { delimiter, join } from "node:path";
 import { spawn, spawnSync } from "child_process";
 import { getBinDir } from "../config.ts";
+
+/**
+ * Executable-exists check that also accepts Windows app-execution aliases
+ * (`%LOCALAPPDATA%\Microsoft\WindowsApps\*.exe`). Those are APPEXECLINK reparse
+ * points: `existsSync`/`statSync` fail on them with EACCES even though the alias
+ * is launchable, so `existsSync` alone hides Store/MSIX installs of pwsh.
+ */
+function executableExists(path: string): boolean {
+	if (existsSync(path)) {
+		return true;
+	}
+	try {
+		accessSync(path, constants.F_OK);
+		return true;
+	} catch {
+		return false;
+	}
+}
 
 export interface ShellConfig {
 	shell: string;
@@ -70,7 +88,7 @@ function findPwshOnPath(): string | null {
 			});
 			if (result.status === 0 && result.stdout) {
 				const firstMatch = result.stdout.trim().split(/\r?\n/)[0];
-				if (firstMatch && existsSync(firstMatch)) {
+				if (firstMatch && executableExists(firstMatch)) {
 					return firstMatch;
 				}
 			}
@@ -187,7 +205,7 @@ export function getPwshShellConfig(customShellPath?: string): ShellConfig {
 	const cacheKey = customShellPath ?? "";
 	const cached = pwshConfigCache.get(cacheKey);
 	if (cached) {
-		if (existsSync(cached.shell)) {
+		if (executableExists(cached.shell)) {
 			return cached;
 		}
 		pwshConfigCache.delete(cacheKey);
@@ -199,7 +217,7 @@ export function getPwshShellConfig(customShellPath?: string): ShellConfig {
 
 function resolvePwshShellConfig(customShellPath?: string): ShellConfig {
 	if (customShellPath) {
-		if (existsSync(customShellPath)) {
+		if (executableExists(customShellPath)) {
 			return { shell: customShellPath, args: ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command"] };
 		}
 		throw new Error(`Custom pwsh path not found: ${customShellPath}`);
@@ -226,7 +244,7 @@ function resolvePwshShellConfig(customShellPath?: string): ShellConfig {
 		knownPaths.push("/usr/bin/pwsh", "/usr/local/bin/pwsh", "/opt/microsoft/powershell/7/pwsh");
 	}
 	for (const path of knownPaths) {
-		if (existsSync(path)) {
+		if (executableExists(path)) {
 			return { shell: path, args: ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command"] };
 		}
 	}
