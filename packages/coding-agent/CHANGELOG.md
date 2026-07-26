@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.82.1-pwsh.1] - 2026-07-26
+
+Fork release (sini-codes/pi): native PowerShell Core support on top of upstream v0.82.1.
+
+### Added
+
+- Native `pwsh` shell tool as the default: pwsh-aware system prompt, `--shell bash|pwsh` flag, `shellTool` setting, RPC `pwsh`/`abort_pwsh` commands, SDK `shellTool` option, and `user_pwsh`/`pwsh` tool extension events. Only one shell tool (`bash` or `pwsh`) can be active at a time.
+- Windows install/update flow via GitHub Releases: `install.ps1` one-liner installer; `pi update` for binary installs hands off to the installer.
+
+### Changed
+
+- Version checks track `sini-codes/pi` GitHub releases instead of pi.dev.
+- npm publishing disabled in CI; distribution is GitHub Releases only.
+
 ## [0.82.1] - 2026-07-25
 
 ### New Features
