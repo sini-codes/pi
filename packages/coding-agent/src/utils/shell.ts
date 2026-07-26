@@ -157,9 +157,31 @@ export function getShellConfig(customShellPath?: string): ShellConfig {
 }
 
 /**
+ * Cache of successfully resolved pwsh paths keyed by customShellPath ("" for default).
+ * Resolution spawns `where`/`which` per call otherwise, which can flake transiently
+ * (AV scanning, process pressure) and randomly fail mid-session. Failures are never
+ * cached; a cached path is revalidated with existsSync and dropped if the file is gone.
+ */
+const pwshConfigCache = new Map<string, ShellConfig>();
+
+/**
  * Resolve PowerShell configuration without changing the bash resolver.
  */
 export function getPwshShellConfig(customShellPath?: string): ShellConfig {
+	const cacheKey = customShellPath ?? "";
+	const cached = pwshConfigCache.get(cacheKey);
+	if (cached) {
+		if (existsSync(cached.shell)) {
+			return cached;
+		}
+		pwshConfigCache.delete(cacheKey);
+	}
+	const config = resolvePwshShellConfig(customShellPath);
+	pwshConfigCache.set(cacheKey, config);
+	return config;
+}
+
+function resolvePwshShellConfig(customShellPath?: string): ShellConfig {
 	if (customShellPath) {
 		if (existsSync(customShellPath)) {
 			return { shell: customShellPath, args: ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command"] };
