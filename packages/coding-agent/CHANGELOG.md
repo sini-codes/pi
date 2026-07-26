@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.82.1-pwsh.2] - 2026-07-26
+
+### Fixed
+
+- Cached resolved pwsh shell config per session, so transient `where.exe` lookup failures no longer randomly break shell commands mid-conversation. Cached paths are revalidated and failures are never cached.
+- Added `%LOCALAPPDATA%\Microsoft\WindowsApps\pwsh.exe` (MSIX/Store app-execution alias) as a pwsh resolution fallback for winget/Store installs that are not on `PATH`.
+
 ## [0.82.1-pwsh.1] - 2026-07-26
 
 Fork release (sini-codes/pi): native PowerShell Core support on top of upstream v0.82.1.
