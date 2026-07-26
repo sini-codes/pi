@@ -63,7 +63,11 @@ function findBashOnPath(): string | null {
 function findPwshOnPath(): string | null {
 	if (process.platform === "win32") {
 		try {
-			const result = spawnSync("where", ["pwsh.exe"], { encoding: "utf-8", timeout: 5000 });
+			const result = spawnSync("where", ["pwsh.exe"], {
+				encoding: "utf-8",
+				timeout: 5000,
+				windowsHide: true,
+			});
 			if (result.status === 0 && result.stdout) {
 				const firstMatch = result.stdout.trim().split(/\r?\n/)[0];
 				if (firstMatch && existsSync(firstMatch)) {
@@ -166,6 +170,22 @@ export function getPwshShellConfig(customShellPath?: string): ShellConfig {
 	const pwshOnPath = findPwshOnPath();
 	if (pwshOnPath) {
 		return { shell: pwshOnPath, args: ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command"] };
+	}
+
+	// Fallback: known install locations on Windows (PATH may be missing pwsh)
+	const knownPaths: string[] = [];
+	if (process.platform === "win32") {
+		const programFiles = process.env.ProgramFiles;
+		if (programFiles) {
+			knownPaths.push(`${programFiles}\\PowerShell\\7\\pwsh.exe`);
+		}
+	} else {
+		knownPaths.push("/usr/bin/pwsh", "/usr/local/bin/pwsh", "/opt/microsoft/powershell/7/pwsh");
+	}
+	for (const path of knownPaths) {
+		if (existsSync(path)) {
+			return { shell: path, args: ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command"] };
+		}
 	}
 
 	throw new Error(
