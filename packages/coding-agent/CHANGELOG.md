@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.82.1-pwsh.3] - 2026-07-26
+
+### Fixed
+
+- Fixed `pi update` for binary installs: the detached installer handoff died silently without updating and hid all errors. The installer now runs synchronously with visible output, reports failures explicitly with a manual fallback command, and confirms the updated version on success.
+
 ## [0.82.1-pwsh.2] - 2026-07-26
 
 ### Fixed
