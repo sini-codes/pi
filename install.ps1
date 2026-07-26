@@ -49,9 +49,9 @@ try {
         New-Item -ItemType Directory -Force -Path (Split-Path $dest) | Out-Null
         try {
             Copy-Item -LiteralPath $source.FullName -Destination $dest -Force
-        } catch [System.UnauthorizedAccessException] {
-            # Locked by the running pi (pi.exe, loaded native .node addons): renaming is
-            # allowed where overwriting is not.
+        } catch [System.IO.IOException], [System.UnauthorizedAccessException] {
+            # Locked by the running pi (pi.exe, loaded native .node addons): Windows
+            # allows renaming those where overwriting fails.
             $aside = "$dest.$stamp.pi-old"
             Move-Item -LiteralPath $dest -Destination $aside -Force
             $renamed += [pscustomobject]@{ Original = $dest; Aside = $aside }
