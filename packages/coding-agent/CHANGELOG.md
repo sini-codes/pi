@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.82.1-pwsh.4] - 2026-07-26
+
+### Fixed
+
+- Fixed `No pwsh shell found` on machines whose only PowerShell is a Store/MSIX install exposed as an app-execution alias (`%LOCALAPPDATA%\Microsoft\WindowsApps\pwsh.exe`). Those aliases are APPEXECLINK reparse points that `existsSync`/`statSync` reject with `EACCES` even though they launch normally, so pwsh resolution now accepts them.
+
 ## [0.82.1-pwsh.3] - 2026-07-26
 
 ### Fixed
