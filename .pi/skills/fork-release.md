@@ -63,6 +63,8 @@ irm https://raw.githubusercontent.com/sini-codes/pi/feat/pwsh-parallel-tool/inst
 
 ## Gotchas
 
+- [ALWAYS] Run `npm run build` (full workspace, from repo root) after releasing or changing source if a global npm-linked `pi` points at this repo — the link executes compiled `dist/`, and stale dist keeps old behavior (e.g. old pi.dev version checker showing bogus "new version" notices). CI binaries are unaffected.
+- [ALWAYS] Keep the `-pwsh.N` suffix in every version/tag. Prerelease semver compares below the bare base version: a plain `0.82.1` tag would rank above `0.82.1-pwsh.N` yet below nothing useful, and clients on suffixed versions would stop seeing updates.
 - [ALWAYS] Run `npm run hydrate:model-data` after fresh clone before tests/checks — model JSON is generated, not committed
 - [NEVER] Re-run a release for the same version after tag push; bump `N` and release again
 - If CI fails at release-notes extraction, the CHANGELOG section heading does not match the tag version
