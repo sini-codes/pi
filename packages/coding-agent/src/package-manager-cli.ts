@@ -526,21 +526,39 @@ async function runSelfUpdate(command: SelfUpdateCommand): Promise<void> {
 
 const FORK_INSTALLER_URL = "https://raw.githubusercontent.com/sini-codes/pi/feat/pwsh-parallel-tool/install.ps1";
 
-/** Self-update for standalone binary installs: hand off to the fork installer script and exit. */
-function runBinarySelfUpdate(targetVersion: string): void {
+/**
+ * Self-update for standalone binary installs: run the fork installer synchronously.
+ * Must not detach: detached installer runs died silently without updating (and any
+ * error was invisible with stdio ignored). The installer renames the running exe
+ * aside instead of overwriting, so running it while pi is alive is safe. Inherited
+ * stdio makes installer output and errors visible.
+ */
+async function runBinarySelfUpdate(targetVersion: string): Promise<void> {
 	if (process.platform !== "win32") {
-		console.error(chalk.red(`Binary self-update is only automated on Windows.`));
-		console.error(chalk.dim(`Download v${targetVersion} from: https://github.com/sini-codes/pi/releases/latest`));
-		process.exitCode = 1;
-		return;
+		throw new Error(
+			`Binary self-update is only automated on Windows. Download v${targetVersion} from: https://github.com/sini-codes/pi/releases/latest`,
+		);
 	}
-	console.log(chalk.dim(`Launching installer for v${targetVersion}... ${APP_NAME} will restart shortly.`));
-	const child = spawn(
-		"powershell.exe",
-		["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", `irm '${FORK_INSTALLER_URL}' | iex`],
-		{ detached: true, stdio: "ignore", windowsHide: false },
-	);
-	child.unref();
+	console.log(chalk.dim(`Running installer for v${targetVersion}...`));
+	await new Promise<void>((resolve, reject) => {
+		const child = spawn(
+			"powershell.exe",
+			["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", `irm '${FORK_INSTALLER_URL}' | iex`],
+			{ stdio: "inherit", windowsHide: true },
+		);
+		child.on("error", (error) => {
+			reject(new Error(`Could not start installer: ${error.message}`));
+		});
+		child.on("close", (code, signal) => {
+			if (code === 0) {
+				resolve();
+			} else if (signal) {
+				reject(new Error(`Installer terminated by signal ${signal}`));
+			} else {
+				reject(new Error(`Installer exited with code ${code ?? "unknown"}`));
+			}
+		});
+	});
 }
 
 function prepareWindowsNpmSelfUpdate(): void {
@@ -861,7 +879,16 @@ export async function handlePackageCommand(
 						if (selfUpdatePlan.note) {
 							printSelfUpdateNote(selfUpdatePlan.note);
 						}
-						runBinarySelfUpdate(selfUpdatePlan.version);
+						try {
+							await runBinarySelfUpdate(selfUpdatePlan.version);
+						} catch (error: unknown) {
+							const message = error instanceof Error ? error.message : "Unknown installer error";
+							console.error(chalk.red(`Error: ${message}`));
+							console.error(chalk.dim(`Run the installer yourself: irm ${FORK_INSTALLER_URL} | iex`));
+							process.exitCode = 1;
+							return true;
+						}
+						console.log(chalk.green(`Updated ${APP_NAME} from ${VERSION} to ${selfUpdatePlan.version}`));
 						return true;
 					}
 					if (process.platform === "win32" && installMethod !== "npm" && installMethod !== "pnpm") {
