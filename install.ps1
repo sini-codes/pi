@@ -27,19 +27,48 @@ $tempZip = Join-Path $env:TEMP "pi-install-$([guid]::NewGuid().ToString('N')).zi
 Write-Host "Downloading $assetName ($tag)..."
 Invoke-WebRequest $asset.browser_download_url -OutFile $tempZip -Headers @{ 'User-Agent' = 'pi-fork-installer' }
 
+$tempExtract = Join-Path $env:TEMP "pi-extract-$([guid]::NewGuid().ToString('N'))"
+Expand-Archive $tempZip -DestinationPath $tempExtract -Force
+Remove-Item $tempZip -Force -ErrorAction SilentlyContinue
+
 New-Item -ItemType Directory -Force -Path $installDir | Out-Null
 
-# Windows allows renaming a running exe but not overwriting it.
-# Move current binaries aside; clean stale ones from previous updates.
-Get-ChildItem $installDir -Filter '*.old' -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
-if (Test-Path $currentExe) {
-    $stamp = Get-Date -Format 'yyyyMMddHHmmss'
-    Move-Item $currentExe "$currentExe.$stamp.old" -Force
+# Drop leftovers from previous updates (ignore any still locked by a live process).
+Get-ChildItem $installDir -Recurse -Filter '*.pi-old' -Force -ErrorAction SilentlyContinue |
+    Remove-Item -Force -ErrorAction SilentlyContinue
+
+# Copy the new tree over the install dir. Windows refuses to overwrite files that are
+# locked by a running process (pi.exe itself, loaded native .node addons) but allows
+# renaming them, so rename-aside first and roll back if anything fails.
+$stamp = Get-Date -Format 'yyyyMMddHHmmss'
+$renamed = @()
+try {
+    foreach ($source in Get-ChildItem $tempExtract -Recurse -File -Force) {
+        $relative = $source.FullName.Substring($tempExtract.Length).TrimStart('\')
+        $dest = Join-Path $installDir $relative
+        New-Item -ItemType Directory -Force -Path (Split-Path $dest) | Out-Null
+        try {
+            Copy-Item -LiteralPath $source.FullName -Destination $dest -Force
+        } catch [System.UnauthorizedAccessException] {
+            # Locked by the running pi (pi.exe, loaded native .node addons): renaming is
+            # allowed where overwriting is not.
+            $aside = "$dest.$stamp.pi-old"
+            Move-Item -LiteralPath $dest -Destination $aside -Force
+            $renamed += [pscustomobject]@{ Original = $dest; Aside = $aside }
+            Copy-Item -LiteralPath $source.FullName -Destination $dest -Force
+        }
+    }
+} catch {
+    Write-Host "Install failed, rolling back..." -ForegroundColor Yellow
+    foreach ($entry in $renamed) {
+        Remove-Item -LiteralPath $entry.Original -Force -ErrorAction SilentlyContinue
+        Move-Item -LiteralPath $entry.Aside -Destination $entry.Original -Force -ErrorAction SilentlyContinue
+    }
+    Remove-Item $tempExtract -Recurse -Force -ErrorAction SilentlyContinue
+    throw
 }
 
-# Release zip is flat (pi.exe at root)
-Expand-Archive $tempZip -DestinationPath $installDir -Force
-Remove-Item $tempZip -Force -ErrorAction SilentlyContinue
+Remove-Item $tempExtract -Recurse -Force -ErrorAction SilentlyContinue
 
 # Add install dir to user PATH if missing
 $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
@@ -49,5 +78,6 @@ if (($userPath -split ';') -notcontains $installDir) {
     Write-Host "Added $installDir to user PATH (restart terminals to pick it up)."
 }
 
-$installed = & (Join-Path $installDir 'pi.exe') --version
+$installed = & $currentExe --version
 Write-Host "pi $installed installed to $installDir" -ForegroundColor Green
+Write-Host "Leftover .pi-old files are cleaned up on the next update." -ForegroundColor DarkGray
