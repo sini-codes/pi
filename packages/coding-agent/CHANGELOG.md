@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.82.1-pwsh.6] - 2026-07-27
+
+### Fixed
+
+- Fixed the installer placing files in a bogus nested directory (for example `pi\0\pi.exe`) on some machines, which left `pi.exe` missing from the install directory. Install-relative paths are now derived from the resolved extract root instead of string slicing, so short (8.3) paths, casing differences, and `%TEMP%` normalization no longer break the layout.
+
 ## [0.82.1-pwsh.5] - 2026-07-26
 
 ### Fixed
