@@ -31,6 +31,11 @@ $tempExtract = Join-Path $env:TEMP "pi-extract-$([guid]::NewGuid().ToString('N')
 Expand-Archive $tempZip -DestinationPath $tempExtract -Force
 Remove-Item $tempZip -Force -ErrorAction SilentlyContinue
 
+# Use the filesystem's own resolved path as the copy root. Deriving relative paths by
+# slicing the constructed string breaks when enumerated paths differ from it (8.3 short
+# names, casing, %TEMP% normalization) and silently produced nested junk directories.
+$extractRoot = (Get-Item -LiteralPath $tempExtract).FullName.TrimEnd('\')
+
 New-Item -ItemType Directory -Force -Path $installDir | Out-Null
 
 # Drop leftovers from previous updates (ignore any still locked by a live process).
@@ -43,8 +48,15 @@ Get-ChildItem $installDir -Recurse -Filter '*.pi-old' -Force -ErrorAction Silent
 $stamp = Get-Date -Format 'yyyyMMddHHmmss'
 $renamed = @()
 try {
-    foreach ($source in Get-ChildItem $tempExtract -Recurse -File -Force) {
-        $relative = $source.FullName.Substring($tempExtract.Length).TrimStart('\')
+    foreach ($source in Get-ChildItem -LiteralPath $extractRoot -Recurse -File -Force) {
+        # PowerShell 5.1 has no [System.IO.Path]::GetRelativePath, and `pi update` runs
+        # this script through powershell.exe, so derive the relative path with Uri.
+        $relative = [Uri]::UnescapeDataString(
+            ([Uri]"$extractRoot\").MakeRelativeUri([Uri]$source.FullName).ToString()
+        ).Replace('/', '\')
+        if (-not $relative -or $relative.StartsWith('..') -or [System.IO.Path]::IsPathRooted($relative)) {
+            throw "Could not determine install-relative path for $($source.FullName) (root: $extractRoot)"
+        }
         $dest = Join-Path $installDir $relative
         New-Item -ItemType Directory -Force -Path (Split-Path $dest) | Out-Null
         try {
