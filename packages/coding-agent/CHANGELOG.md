@@ -6,6 +6,20 @@
 
 - Fixed proxied plain-HTTP provider requests hanging after a tool call by tunneling them with CONNECT ([#8134](https://github.com/earendil-works/pi/issues/8134)).
 
+## [0.84.4-pwsh.1] - 2026-09-02
+
+Fork release: rebased `feat/pwsh-parallel-tool` onto upstream v0.84.4 (previous base: v0.82.1).
+
+### Changed
+
+- Rebased all fork changes onto upstream v0.84.4; adopted upstream fixes and features from 0.82.1 → 0.84.4 including staged managed self-updates, `defaultTools` setting, and the optional upstream `powershell` tool.
+- Fork `pwsh` tool remains the default shell tool (`--shell <bash|pwsh>`, default `pwsh`); upstream's optional `powershell` tool is available alongside it unchanged.
+- GitHub Releases distribution, `install.ps1` installer, binary self-update handoff, and sini-codes/pi version checks preserved.
+
+### Fixed
+
+- Adapted `defaultTools` test expectations to include the fork `pwsh` tool.
+
 ## [0.84.4] - 2026-08-28
 
 ### New Features
