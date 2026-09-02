@@ -51,7 +51,11 @@ for (const pkg of workspacePackages) {
 			// Registry aliases such as `npm:@earendil-works/pi-ai@0.1.2` are never workspace-linked,
 			// so lockstep bumping them would point at a version that is not published yet.
 			const version = versionMap.get(dependencyName);
-			const newSpecifier = version ? `^${version}` : null;
+			// Fork: pin prerelease fork versions exactly. A caret range like `^0.84.4-pwsh.1`
+			// also matches the plain upstream release `0.84.4` on the npm registry, which npm
+			// prefers over the workspace prerelease and installs as a nested real copy,
+			// breaking workspace symlinks and the coding-agent bundle input paths.
+			const newSpecifier = version ? (version.includes("-pwsh.") ? version : `^${version}`) : null;
 			if (!newSpecifier || currentSpecifier === newSpecifier) {
 				continue;
 			}

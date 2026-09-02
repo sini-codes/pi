@@ -6,7 +6,7 @@
 
 - Fixed proxied plain-HTTP provider requests hanging after a tool call by tunneling them with CONNECT ([#8134](https://github.com/earendil-works/pi/issues/8134)).
 
-## [0.84.4-pwsh.1] - 2026-09-02
+## [0.84.4-pwsh.2] - 2026-09-02
 
 Fork release: rebased `feat/pwsh-parallel-tool` onto upstream v0.84.4 (previous base: v0.82.1).
 
@@ -19,6 +19,7 @@ Fork release: rebased `feat/pwsh-parallel-tool` onto upstream v0.84.4 (previous 
 ### Fixed
 
 - Adapted `defaultTools` test expectations to include the fork `pwsh` tool.
+- Pinned internal workspace dependencies to the exact fork version. Caret ranges let npm substitute the published upstream release for workspace packages, which broke the binary bundle build (v0.84.4-pwsh.1 tag is abandoned for this reason).
 
 ## [0.84.4] - 2026-08-28
 
