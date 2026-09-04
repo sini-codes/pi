@@ -33,6 +33,7 @@ export function createAllToolRenderers(): Record<ToolName, ToolRenderers> {
 	return {
 		read: readRenderers,
 		bash: createShellRenderers("$"),
+		pwsh: createShellRenderers("PS>"),
 		powershell: createShellRenderers("PS>"),
 		edit: editRenderers,
 		write: writeRenderers,
