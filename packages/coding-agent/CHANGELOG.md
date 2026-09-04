@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.85.0-pwsh.1] - 2026-09-04
+
+Fork release: rebased `feat/pwsh-parallel-tool` onto upstream v0.85.0 (previous base: v0.84.4).
+
+### Changed
+
+- Rebased all fork changes onto upstream v0.85.0. Fork `pwsh` remains the default shell tool; upstream `powershell` tool unchanged alongside.
+- Registered the fork `pwsh` tool in the new built-in tool renderer registry.
+- GitHub Releases distribution, `install.ps1` installer, binary self-update, and sini-codes/pi version checks preserved.
+
+## [0.84.4-pwsh.3] - 2026-09-02
+
+Fork release: rebased `feat/pwsh-parallel-tool` onto upstream v0.84.4 (previous base: v0.82.1).
+
+### Changed
+
+- Rebased all fork changes onto upstream v0.84.4; adopted upstream fixes and features from 0.82.1 → 0.84.4 including staged managed self-updates, `defaultTools` setting, and the optional upstream `powershell` tool.
+- Fork `pwsh` tool remains the default shell tool (`--shell <bash|pwsh>`, default `pwsh`); upstream's optional `powershell` tool is available alongside it unchanged.
+- GitHub Releases distribution, `install.ps1` installer, binary self-update handoff, and sini-codes/pi version checks preserved.
+
+### Fixed
+
+- Adapted `defaultTools` test expectations to include the fork `pwsh` tool.
+- Pinned internal workspace dependencies to the exact fork version. Caret ranges let npm substitute the published upstream release for workspace packages, which broke the binary bundle build (v0.84.4-pwsh.1 tag is abandoned for this reason).
+- Regenerated the root lockfile from scratch after purging stale nested registry copies of workspace packages. Leftover copies were recorded as `extraneous`, losing their `optional` platform flags and breaking `npm ci` on Linux CI (v0.84.4-pwsh.2 tag is abandoned for this reason).
+
 ## [0.85.0] - 2026-09-04
 
 ### New Features
