@@ -66,6 +66,9 @@ irm https://raw.githubusercontent.com/sini-codes/pi/feat/pwsh-parallel-tool/inst
 
 ## Gotchas
 
+- [NEVER] Let internal `@earendil-works/*` deps use caret ranges (`^<base>-pwsh.N`). Upstream now publishes plain releases to npm, and semver ranks `0.84.4` above `0.84.4-pwsh.N`, so npm installs a real nested registry copy under `packages/coding-agent/node_modules/` instead of the workspace symlink. That breaks `build-coding-agent-bundle.mjs` (bundle inputs no longer match `packages/ai/dist/...`). `scripts/sync-versions.js` pins fork versions exactly; if a nested `packages/coding-agent/node_modules/@earendil-works/` directory appears, delete it and re-run `npm install`, then verify `npm run build` before tagging.
+- [ALWAYS] Run a full local `npm run build` (bundle included) before pushing the tag — CI failures burn the tag and force a version bump.
+
 - [ALWAYS] Run `npm run build` (full workspace, from repo root) after releasing or changing source if a global npm-linked `pi` points at this repo — the link executes compiled `dist/`, and stale dist keeps old behavior (e.g. old pi.dev version checker showing bogus "new version" notices). CI binaries are unaffected.
 - [ALWAYS] Keep the `-pwsh.N` suffix in every version/tag. Prerelease semver compares below the bare base version: a plain `0.82.1` tag would rank above `0.82.1-pwsh.N` yet below nothing useful, and clients on suffixed versions would stop seeing updates.
 - [ALWAYS] Run `npm run hydrate:model-data` after fresh clone before tests/checks — model JSON is generated, not committed
