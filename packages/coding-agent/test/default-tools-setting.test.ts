@@ -93,7 +93,7 @@ describe("defaultTools setting", () => {
 			},
 		]);
 
-		expect(session.getActiveToolNames().sort()).toEqual(["bash", "edit", "inactive_tool", "read"]);
+		expect(session.getActiveToolNames().sort()).toEqual(["edit", "inactive_tool", "pwsh", "read"]);
 		session.dispose();
 	});
 

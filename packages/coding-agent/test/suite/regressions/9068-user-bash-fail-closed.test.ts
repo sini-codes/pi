@@ -226,6 +226,8 @@ describe("Interactive user_bash failure handling (#9068)", () => {
 	])("fails closed for %s when a handler returns an empty result", async (input, excludeFromContext) => {
 		const events: UserBashEvent[] = [];
 		const harness = await createHarness({
+			// Fork: `!` commands route to the active shell tool; select bash so user_bash fires.
+			initialActiveToolNames: ["read", "bash", "edit", "write"],
 			extensionFactories: [
 				(pi) => {
 					pi.on("user_bash", async (event) => {

@@ -650,7 +650,7 @@ describe("SettingsManager", () => {
 		it("applies +name and -name to the default selection", () => {
 			expect(SettingsManager.inMemory({ defaultTools: ["+codemode", "-write"] }).getDefaultTools()).toEqual([
 				"read",
-				"bash",
+				"pwsh",
 				"edit",
 				"codemode",
 			]);
@@ -682,7 +682,7 @@ describe("SettingsManager", () => {
 
 			expect(SettingsManager.create(projectDir, agentDir).getDefaultTools()).toEqual([
 				"read",
-				"bash",
+				"pwsh",
 				"edit",
 				"write",
 				"codemode",
