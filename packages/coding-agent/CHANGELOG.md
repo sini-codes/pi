@@ -1,5 +1,48 @@
 # Changelog
 
+## [0.99.1-pwsh.1] - 2026-09-30
+
+Fork release: rebased `feat/pwsh-parallel-tool` onto upstream v0.99.1 (previous base: v0.85.0).
+
+### Changed
+
+- Rebased all fork changes onto upstream v0.99.1; adopted upstream fixes and features from 0.85.0 → 0.99.1 (structured system prompt sections, tool loadout/exposure, codemode, MCP, `defaultTools` modifiers, durable runtime, GPT-6.1 Sol, and more).
+- Fork `pwsh` remains the default shell tool (`--shell <bash|pwsh>`, `shellTool` setting). `DEFAULT_TOOL_NAMES` is `read`, `pwsh`, `edit`, `write`; `+name`/`-name` `defaultTools` modifiers apply on top of the pwsh default. Upstream `powershell` tool unchanged alongside.
+- `user_pwsh` extension handler results follow the upstream `user_bash` contract (`{ operations }` or `{ result }`; invalid results fail closed).
+- `!`/`!!` editor commands route to the active shell tool (`user_pwsh` when `pwsh` is active, `user_bash` when `bash` is active).
+- GitHub Releases distribution, `install.ps1` installer, binary self-update, and sini-codes/pi version checks preserved.
+- Dropped fork root `cross-spawn`/`semver` hoist pins; upstream now declares them as direct coding-agent dependencies.
+
+### Fixed
+
+- Aligned test expectations for default tools, exclude-tools, system prompt updates, and context handlers with the fork `pwsh` default.
+
+## [0.85.0-pwsh.1] - 2026-09-04
+
+Fork release: rebased `feat/pwsh-parallel-tool` onto upstream v0.85.0 (previous base: v0.84.4).
+
+### Changed
+
+- Rebased all fork changes onto upstream v0.85.0. Fork `pwsh` remains the default shell tool; upstream `powershell` tool unchanged alongside.
+- Registered the fork `pwsh` tool in the new built-in tool renderer registry.
+- GitHub Releases distribution, `install.ps1` installer, binary self-update, and sini-codes/pi version checks preserved.
+
+## [0.84.4-pwsh.3] - 2026-09-02
+
+Fork release: rebased `feat/pwsh-parallel-tool` onto upstream v0.84.4 (previous base: v0.82.1).
+
+### Changed
+
+- Rebased all fork changes onto upstream v0.84.4; adopted upstream fixes and features from 0.82.1 ΓåÆ 0.84.4 including staged managed self-updates, `defaultTools` setting, and the optional upstream `powershell` tool.
+- Fork `pwsh` tool remains the default shell tool (`--shell <bash|pwsh>`, default `pwsh`); upstream's optional `powershell` tool is available alongside it unchanged.
+- GitHub Releases distribution, `install.ps1` installer, binary self-update handoff, and sini-codes/pi version checks preserved.
+
+### Fixed
+
+- Adapted `defaultTools` test expectations to include the fork `pwsh` tool.
+- Pinned internal workspace dependencies to the exact fork version. Caret ranges let npm substitute the published upstream release for workspace packages, which broke the binary bundle build (v0.84.4-pwsh.1 tag is abandoned for this reason).
+- Regenerated the root lockfile from scratch after purging stale nested registry copies of workspace packages. Leftover copies were recorded as `extraneous`, losing their `optional` platform flags and breaking `npm ci` on Linux CI (v0.84.4-pwsh.2 tag is abandoned for this reason).
+
 ## [0.99.1] - 2026-09-29
 
 ### New Features
