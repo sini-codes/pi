@@ -1557,10 +1557,6 @@ export class AgentSession {
 	 * Changes take effect on the next agent turn.
 	 */
 	setActiveToolsByName(toolNames: string[]): void {
-		const requested = new Set(toolNames.filter((name) => this._toolRegistry.has(name)));
-		if (requested.has("bash") && requested.has("pwsh")) {
-			throw new Error("Only one shell tool can be active at a time. Choose either 'bash' or 'pwsh'.");
-		}
 		const previous = this.getActiveToolNames();
 		this._setActiveTools(toolNames);
 		// A loadout that deactivates a tool replaces the restored one, whose pending tools are dropped.
@@ -1570,6 +1566,10 @@ export class AgentSession {
 	}
 
 	private _setActiveTools(toolNames: string[]): void {
+		const requested = new Set(toolNames.filter((name) => this._toolRegistry.has(name)));
+		if (requested.has("bash") && requested.has("pwsh")) {
+			throw new Error("Only one shell tool can be active at a time. Choose either 'bash' or 'pwsh'.");
+		}
 		const tools = this._applyToolLoadout(toolNames);
 		for (const tool of tools) this._pendingToolNames.delete(tool.name);
 		this._rebuildSystemPrompt(tools.map((tool) => tool.name));

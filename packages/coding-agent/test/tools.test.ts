@@ -978,6 +978,33 @@ describe("Coding Agent Tools", () => {
 		it("should expose a first-party pwsh tool", () => {
 			expect(pwshTool.name).toBe("pwsh");
 		});
+
+		const hasPwsh = (() => {
+			try {
+				shellModule.getPwshShellConfig();
+				return true;
+			} catch {
+				return false;
+			}
+		})();
+
+		it.skipIf(!hasPwsh)("should report cmdlet errors and native exit codes as non-zero exit codes", async () => {
+			const ok = await pwshTool.execute("test-pwsh-exit-ok", { command: "Write-Output ok" });
+			expect(ok.isError).toBeFalsy();
+			expect((ok.structuredContent as { exit_code: number }).exit_code).toBe(0);
+
+			const cmdletError = await pwshTool.execute("test-pwsh-exit-cmdlet", {
+				command: "Get-Item (Join-Path $PWD 'definitely-missing-file')",
+			});
+			expect(cmdletError.isError).toBe(true);
+			expect(getTextOutput(cmdletError)).toContain("Command exited with code 1");
+
+			const nativeExit = await pwshTool.execute("test-pwsh-exit-native", {
+				command: process.platform === "win32" ? "cmd /c exit 7" : "sh -c 'exit 7'",
+			});
+			expect(nativeExit.isError).toBe(true);
+			expect((nativeExit.structuredContent as { exit_code: number }).exit_code).toBe(7);
+		});
 	});
 
 	describe("grep tool", () => {

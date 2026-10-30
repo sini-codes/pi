@@ -1313,7 +1313,8 @@
 
           if (msg.role === 'bashExecution') {
             const isError = msg.cancelled || (msg.exitCode !== 0 && msg.exitCode !== null);
-            const prompt = msg.shell === 'pwsh' ? 'PS>' : '$';
+            // Double-quoted on purpose: dollar followed by a single quote is a String.replace pattern when this template is injected.
+            const prompt = msg.shell === 'pwsh' ? 'PS>' : "$";
             let html = `<div class="tool-execution ${isError ? 'error' : 'success'}" id="${entryDomId}">${tsHtml}`;
             html += `<div class="tool-command">${prompt} ${escapeHtml(msg.command)}</div>`;
             if (msg.output) html += formatExpandableOutput(msg.output, 10);
