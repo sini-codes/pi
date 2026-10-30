@@ -29,9 +29,13 @@ node scripts/sync-versions.js
 
 ```powershell
 npm install --package-lock-only --ignore-scripts
-node scripts/generate-coding-agent-shrinkwrap.mjs
 node scripts/generate-coding-agent-install-lock.mjs
 ```
+
+[MUST] Before `npm install --package-lock-only`: delete every `packages/*/node_modules/@earendil-works`
+directory and rename root `node_modules` away (see Gotchas). Upstream publishes the plain base version
+to npm, and npm materializes registry copies of workspace packages otherwise. `npm-shrinkwrap.json`
+no longer exists upstream (removed before 1.4.0); only the install-lock is generated.
 
 3. Add a `## [<VERSION>] - YYYY-MM-DD` section at the top of `packages/coding-agent/CHANGELOG.md`
    with the changes. [MUST] Heading version matches exactly — CI extracts it as release notes and
@@ -44,16 +48,17 @@ $env:PI_ALLOW_LOCKFILE_CHANGE = "1"
 git add <changed files>   # package.json files, lockfiles, CHANGELOG
 git commit -m "release: v<VERSION>"
 git tag v<VERSION>
-git push fork feat/pwsh-parallel-tool v<VERSION>
+git push fork feat/pwsh-parallel-tool v<VERSION>   # after a rebase: git push --force-with-lease fork feat/pwsh-parallel-tool, then the tag
 ```
 
-5. Dispatch the build workflow manually — tag pushes do NOT auto-trigger CI on this fork
-   (observed on every release so far). The run builds 6 platform binaries and publishes the
-   GitHub release automatically (~3 min):
+5. Watch the build workflow. Since v1.4.0-pwsh.1 the tag push triggers CI on the fork; earlier
+   releases needed a manual dispatch. If no run appears within a minute, dispatch it. The run builds
+   6 platform binaries plus env daemons and publishes the GitHub release automatically (~15 min):
 
 ```powershell
-gh workflow run build-binaries.yml --repo sini-codes/pi --ref v<VERSION> -f tag=v<VERSION>
 gh run list --repo sini-codes/pi --workflow build-binaries.yml --limit 1   # grab run id
+# only if the tag push did not start a run:
+gh workflow run build-binaries.yml --repo sini-codes/pi --ref v<VERSION> -f tag=v<VERSION>
 gh run watch <RUN_ID> --repo sini-codes/pi --exit-status
 gh release view v<VERSION> --repo sini-codes/pi
 ```
@@ -75,3 +80,6 @@ irm https://raw.githubusercontent.com/sini-codes/pi/feat/pwsh-parallel-tool/inst
 - [NEVER] Re-run a release for the same version after tag push; bump `N` and release again
 - If CI fails at release-notes extraction, the CHANGELOG section heading does not match the tag version
 - Fork-specific files to keep intact when rebasing on upstream: `install.ps1`, the `publish-npm: if false` patch in `build-binaries.yml`, GitHub-releases URL in `src/utils/version-check.ts`, binary self-update in `src/package-manager-cli.ts`
+- Rebase procedure: `git branch backup/<old-version> HEAD`, then `git rebase v<base>` (the fork commits replay on the upstream tag), skip the previous `release:` commit (versions and lockfiles are regenerated), and keep the old fork CHANGELOG sections by re-adding them above the upstream sections. After the rebase run `npm run check` and the coding-agent vitest suite, and compare failures against a pristine upstream worktree on Windows; several upstream tests fail on Windows regardless (WSL bash, temp-dir EPERM, path separators).
+- Fork `pwsh` tool is a thin wrapper over upstream `createShellToolDefinition` (`src/core/tools/pwsh.ts`, mirrors `powershell.ts`). Keep it thin; fork-specific behavior lives in `wrapPwshCommand` and `getPwshShellConfig` in `src/utils/shell.ts`.
+- `settings.schema.json` is generated: after touching `settings-schema.ts` run `npm run generate:schemas` in `packages/coding-agent`, or `config-schemas.test.ts` fails.
