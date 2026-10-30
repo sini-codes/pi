@@ -1,25 +1,7 @@
-import { accessSync, constants, existsSync } from "node:fs";
+import { accessSync, constants } from "node:fs";
 import { delimiter, join, win32 } from "node:path";
 import { spawn, spawnSync } from "child_process";
 import { getBinDir } from "../config.ts";
-
-/**
- * Executable-exists check that also accepts Windows app-execution aliases
- * (`%LOCALAPPDATA%\Microsoft\WindowsApps\*.exe`). Those are APPEXECLINK reparse
- * points: `existsSync`/`statSync` fail on them with EACCES even though the alias
- * is launchable, so `existsSync` alone hides Store/MSIX installs of pwsh.
- */
-function executableExists(path: string): boolean {
-	if (existsSync(path)) {
-		return true;
-	}
-	try {
-		accessSync(path, constants.F_OK);
-		return true;
-	} catch {
-		return false;
-	}
-}
 
 export interface ShellConfig {
 	shell: string;
@@ -107,7 +89,7 @@ function findPwshOnPath(): string | null {
 			});
 			if (result.status === 0 && result.stdout) {
 				const firstMatch = result.stdout.trim().split(/\r?\n/)[0];
-				if (firstMatch && executableExists(firstMatch)) {
+				if (firstMatch && shellPathExists(firstMatch)) {
 					return firstMatch;
 				}
 			}
@@ -238,7 +220,7 @@ export function getPwshShellConfig(customShellPath?: string): ShellConfig {
 	const cacheKey = customShellPath ?? "";
 	const cached = pwshConfigCache.get(cacheKey);
 	if (cached) {
-		if (executableExists(cached.shell)) {
+		if (shellPathExists(cached.shell)) {
 			return cached;
 		}
 		pwshConfigCache.delete(cacheKey);
@@ -250,7 +232,7 @@ export function getPwshShellConfig(customShellPath?: string): ShellConfig {
 
 function resolvePwshShellConfig(customShellPath?: string): ShellConfig {
 	if (customShellPath) {
-		if (executableExists(customShellPath)) {
+		if (shellPathExists(customShellPath)) {
 			return { shell: customShellPath, args: ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command"] };
 		}
 		throw new Error(`Custom pwsh path not found: ${customShellPath}`);
@@ -277,7 +259,7 @@ function resolvePwshShellConfig(customShellPath?: string): ShellConfig {
 		knownPaths.push("/usr/bin/pwsh", "/usr/local/bin/pwsh", "/opt/microsoft/powershell/7/pwsh");
 	}
 	for (const path of knownPaths) {
-		if (executableExists(path)) {
+		if (shellPathExists(path)) {
 			return { shell: path, args: ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command"] };
 		}
 	}
@@ -290,18 +272,24 @@ function resolvePwshShellConfig(customShellPath?: string): ShellConfig {
 	);
 }
 
+/**
+ * Wrap a pwsh command so failures become a non-zero process exit code: cmdlet errors terminate the
+ * script (exit 1), and the exit code of the last failing native command is propagated. `$?` alone
+ * is not enough, because after a `& { }` block it reports the block invocation, not the native
+ * command inside it.
+ */
 export function wrapPwshCommand(command: string): string {
 	return [
 		"$ErrorActionPreference = 'Stop'",
 		"$ProgressPreference = 'SilentlyContinue'",
 		"$PSNativeCommandUseErrorActionPreference = $false",
+		"$global:LASTEXITCODE = 0",
 		"& {",
 		command,
 		"}",
-		"if (-not $?) {",
-		"  if ($LASTEXITCODE -is [int] -and $LASTEXITCODE -ne 0) { exit $LASTEXITCODE }",
-		"  exit 1",
-		"}",
+		"$__piOk = $?",
+		"if ($LASTEXITCODE -is [int] -and $LASTEXITCODE -ne 0) { exit $LASTEXITCODE }",
+		"if (-not $__piOk) { exit 1 }",
 		"exit 0",
 	].join("\n");
 }

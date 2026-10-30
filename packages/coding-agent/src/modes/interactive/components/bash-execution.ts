@@ -140,7 +140,11 @@ export class BashExecutionComponent extends Container {
 		this.contentContainer.clear();
 
 		// Command header
-		const header = new Text(theme.fg(this.colorKey, theme.bold(`${this.promptPrefix()} ${this.command}`)), this.outputPad, 0);
+		const header = new Text(
+			theme.fg(this.colorKey, theme.bold(`${this.promptPrefix()} ${this.command}`)),
+			this.outputPad,
+			0,
+		);
 		this.contentContainer.addChild(header);
 
 		// Output

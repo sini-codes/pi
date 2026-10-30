@@ -75,6 +75,8 @@ describe("createAgentSession session manager defaults", () => {
 			agentDir,
 			model: model!,
 			sessionManager,
+			// Fork: pwsh is the default shell tool; this test exercises bash.
+			tools: ["bash"],
 		});
 
 		expect(session.sessionManager).toBe(sessionManager);
@@ -102,6 +104,8 @@ describe("createAgentSession session manager defaults", () => {
 			agentDir,
 			model: model!,
 			thinkingLevel: "high",
+			// Fork: pwsh is the default shell tool; this test exercises bash.
+			tools: ["bash"],
 		});
 		expect(session.sessionFile).toBeTruthy();
 		expect(session.systemPrompt).toContain(

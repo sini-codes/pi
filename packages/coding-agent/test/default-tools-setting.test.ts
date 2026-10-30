@@ -178,10 +178,10 @@ describe("defaultTools setting", () => {
 		const session = await createSession(["+grep"], { tools: ["+inactive_tool", "-write"] }, [inactiveTool]);
 		expect(session.getActiveToolNames().sort()).toEqual([
 			"active_tool",
-			"bash",
 			"edit",
 			"grep",
 			"inactive_tool",
+			"pwsh",
 			"read",
 		]);
 		session.dispose();
@@ -240,12 +240,12 @@ describe("defaultTools setting", () => {
 		// #10245
 		it("activates only tools newly added to defaultTools", async () => {
 			const session = await createFileSession();
-			expect(session.getActiveToolNames()).toEqual(["read", "bash", "edit", "write"]);
+			expect(session.getActiveToolNames()).toEqual(["read", "pwsh", "edit", "write"]);
 			session.setActiveToolsByName(["read", "edit", "write"]);
 
 			writeSettings({ defaultTools: ["+inactive_tool", "+grep"] });
 			await session.reload();
-			// bash was disabled during the session and is not newly added, so it stays off.
+			// pwsh was disabled during the session and is not newly added, so it stays off.
 			expect(session.getActiveToolNames().sort()).toEqual(["edit", "grep", "inactive_tool", "read", "write"]);
 
 			// Removing tools from the setting does not disable them.
@@ -284,7 +284,7 @@ describe("defaultTools setting", () => {
 			const excluded = await createFileSession({ excludeTools: ["grep"] });
 			writeSettings({ defaultTools: ["+grep", "+inactive_tool"] });
 			await excluded.reload();
-			expect(excluded.getActiveToolNames().sort()).toEqual(["bash", "edit", "inactive_tool", "read", "write"]);
+			expect(excluded.getActiveToolNames().sort()).toEqual(["edit", "inactive_tool", "pwsh", "read", "write"]);
 			excluded.dispose();
 		});
 	});
@@ -450,7 +450,7 @@ describe("defaultTools setting", () => {
 			const sessionManager = SessionManager.inMemory(tempDir);
 			sessionManager.appendMessage({ role: "user", content: "hi", timestamp: Date.now() });
 			const session = await resume(sessionManager);
-			expect(session.getActiveToolNames().sort()).toEqual(["active_tool", "bash", "edit", "read", "write"]);
+			expect(session.getActiveToolNames().sort()).toEqual(["active_tool", "edit", "pwsh", "read", "write"]);
 			session.dispose();
 		});
 	});
