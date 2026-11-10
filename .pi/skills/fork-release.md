@@ -45,7 +45,8 @@ no longer exists upstream (removed before 1.4.0); only the install-lock is gener
 
 ```powershell
 $env:PI_ALLOW_LOCKFILE_CHANGE = "1"
-git add <changed files>   # package.json files, lockfiles, CHANGELOG
+git add -A package-lock.json packages apps   # [MUST] include apps/ — sync-versions pins apps/* manifests too; missing them fails `npm ci` in CI (v1.5.1-pwsh.1 abandoned)
+git status --short                            # [MUST] empty after add; then simulate CI: git archive HEAD | tar -x -C <tmp> && npm ci --ignore-scripts --dry-run
 git commit -m "release: v<VERSION>"
 git tag v<VERSION>
 git push fork feat/pwsh-parallel-tool v<VERSION>   # after a rebase: git push --force-with-lease fork feat/pwsh-parallel-tool, then the tag
