@@ -67,6 +67,8 @@ describe("AgentSession dynamic tool registration", () => {
 			agentDir,
 			model,
 			thinkingLevel: "high",
+			// Fork: the extension registers a bash tool; bash and pwsh cannot both be active.
+			shellTool: "bash",
 			settingsManager,
 			sessionManager,
 			resourceLoader,

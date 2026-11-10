@@ -906,21 +906,21 @@ process.exit(${exitCode});
 		vi.stubEnv("PI_SELF_UPDATE_COMMAND", "pi-wrapper upgrade {installSpec} {version}");
 		vi.stubGlobal(
 			"fetch",
-			vi.fn(async () => Response.json({ packageName: "@new-scope/pi", version: targetVersion, note: "Read me" })),
+			vi.fn(async () => Response.json({ tag_name: `v${targetVersion}` })),
 		);
 		const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 		const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
 		await expect(runPackageCommandDirectly(["update", "--self"])).resolves.toBeUndefined();
 
+		// Fork: the GitHub releases API carries no package rename or release note.
 		expect(JSON.parse(readFileSync(recordPath, "utf8")) as string[]).toEqual([
 			"upgrade",
-			`@new-scope/pi@${targetVersion}`,
+			`@earendil-works/pi-coding-agent@${targetVersion}`,
 			targetVersion,
 		]);
 		expect(existsSync(npmRecordPath)).toBe(false);
 		const stdout = logSpy.mock.calls.map(([message]) => String(message)).join("\n");
-		expect(stdout).toContain("Read me");
 		// Like mise, the command leaves this installation untouched; the pi on PATH reports the new version.
 		expect(stdout).toContain(`Updated pi from ${VERSION} to ${targetVersion}`);
 		expect(errorSpy).not.toHaveBeenCalled();
@@ -941,7 +941,7 @@ process.exit(${exitCode});
 			JSON.stringify({ selfUpdateCommand: [originalExecPath, scriptPath, projectRecordPath] }),
 		);
 		vi.stubEnv("PI_SELF_UPDATE_COMMAND", "");
-		const fetchMock = vi.fn(async () => Response.json({ version: VERSION }));
+		const fetchMock = vi.fn(async () => Response.json({ tag_name: `v${VERSION}` }));
 		vi.stubGlobal("fetch", fetchMock);
 		const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 		vi.spyOn(console, "error").mockImplementation(() => {});
@@ -952,7 +952,7 @@ process.exit(${exitCode});
 			`pi is already up to date (v${VERSION})`,
 		);
 
-		fetchMock.mockImplementation(async () => Response.json({ version: targetVersion }));
+		fetchMock.mockImplementation(async () => Response.json({ tag_name: `v${targetVersion}` }));
 		await expect(runPackageCommandDirectly(["update", "--self"])).resolves.toBeUndefined();
 		expect(JSON.parse(readFileSync(recordPath, "utf8")) as string[]).toEqual([PACKAGE_NAME]);
 		expect(process.exitCode).toBeUndefined();
@@ -964,7 +964,7 @@ process.exit(${exitCode});
 		vi.stubEnv("PI_SELF_UPDATE_COMMAND", "pi-wrapper upgrade");
 		vi.stubGlobal(
 			"fetch",
-			vi.fn(async () => Response.json({ version: targetVersion })),
+			vi.fn(async () => Response.json({ tag_name: `v${targetVersion}` })),
 		);
 		const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
@@ -983,7 +983,7 @@ process.exit(${exitCode});
 		vi.stubEnv("PI_SELF_UPDATE_COMMAND", "pi-wrapper upgrade");
 		vi.stubGlobal(
 			"fetch",
-			vi.fn(async () => Response.json({ version: getNewerPatchVersion() })),
+			vi.fn(async () => Response.json({ tag_name: `v${getNewerPatchVersion()}` })),
 		);
 		const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 		const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
