@@ -1,6 +1,6 @@
 # Changelog
 
-## [1.5.1-pwsh.1] - 2026-11-10
+## [1.5.1-pwsh.2] - 2026-11-10
 
 Fork release: rebased `feat/pwsh-parallel-tool` onto upstream v1.5.1 (previous base: v1.4.0).
 
@@ -15,6 +15,7 @@ Fork release: rebased `feat/pwsh-parallel-tool` onto upstream v1.5.1 (previous b
 ### Fixed
 
 - Dropped the fork cherry-pick of the DeepSeek V4.1 Flash test rename; upstream contains it.
+- Release `1.5.1-pwsh.1` tag is abandoned: its source archive failed `npm ci` because the new upstream `apps/p2` workspace manifest was not committed with the synced fork pins.
 - Aligned new upstream tests with the fork: extension-registered `bash` tool tests select `shellTool: "bash"` (bash and pwsh cannot both be active); configured self-update tests mock the GitHub `tag_name` payload.
 ## [1.4.0-pwsh.1] - 2026-10-30
 
